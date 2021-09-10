@@ -1,2 +1,2 @@
-rootProject.name='quickstart-android-cpp'
+rootProject.name='quickstart-android-c-api'
 include ':app'
