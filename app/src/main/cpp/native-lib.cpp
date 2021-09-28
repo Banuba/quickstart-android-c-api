@@ -42,8 +42,8 @@ namespace
         BanubaSdkManager(const std::vector<std::string>& path_to_resources, const std::string& client_token)
         {
             // Size of photo.jpg
-            int32_t width = 700;
-            int32_t height = 724;
+            int32_t width = 1000;
+            int32_t height = 1500;
             bnb_effect_player_configuration_t ep_cfg{width, height, bnb_nn_mode_automatically, bnb_good, false, false};
             auto ort = std::make_shared<bnb::offscreen_render_target>(width, height);
             oep = bnb::interfaces::offscreen_effect_player::create(path_to_resources, client_token,
