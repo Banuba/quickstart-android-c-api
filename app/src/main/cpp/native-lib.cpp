@@ -13,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <optional>
 
 
 #define CHECK_ERROR(error)                                  \
@@ -41,8 +42,8 @@ namespace
         BanubaSdkManager(const std::vector<std::string>& path_to_resources, const std::string& client_token)
         {
             // Size of photo.jpg
-            int32_t width = 1000;
-            int32_t height = 1500;
+            int32_t width = 700;
+            int32_t height = 724;
             bnb_effect_player_configuration_t ep_cfg{width, height, bnb_nn_mode_automatically, bnb_good, false, false};
             auto ort = std::make_shared<bnb::offscreen_render_target>(width, height);
             oep = bnb::interfaces::offscreen_effect_player::create(path_to_resources, client_token,
@@ -57,10 +58,12 @@ namespace
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_createEffectPlayer(JNIEnv* env, jobject thiz, jstring path_to_resources, jstring client_token)
 {
-    std::vector<std::string> paths_r{jstring2string(env, path_to_resources)};
-    auto token = jstring2string(env, client_token);
-
-    auto sdk = new BanubaSdkManager(paths_r, token);
+    static BanubaSdkManager* sdk{nullptr};
+    if(sdk == nullptr){
+        std::vector<std::string> paths_r{jstring2string(env, path_to_resources)};
+        auto token = jstring2string(env, client_token);
+        sdk = new BanubaSdkManager(paths_r, token);
+    }
     return (jlong) sdk;
 }
 
@@ -86,16 +89,15 @@ Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_processPhoto(JNIEnv* env, 
     auto sdk = (BanubaSdkManager*) effect_player;
 
     auto* data = static_cast<uint8_t*>(env->GetDirectBufferAddress(rgba));
-
     bnb_image_format_t image_format{
                 static_cast<uint32_t>(width),
                 static_cast<uint32_t>(height),
                 bnb_image_orientation_t::BNB_DEG_0,
                 /* is_mirrored */ false,
                 /* face_orientation */ 0};
-
-    auto rgb_in = std::make_shared<rgb_image>(color_plane_weak(data), image_format, bnb_pixel_format_t::BNB_RGBA);
-    auto pb = sdk->oep->process_image(rgb_in);
+    int32_t image_stride = static_cast<int32_t>(width) * 4 /* rgba is 1 byte per chanel. */;
+    auto rgb_in = std::make_shared<image_wrapper>(image_format, bnb_pixel_format_t::BNB_RGBA, data, image_stride);
+    auto pb = sdk->oep->process_image_rgba(rgb_in, std::nullopt);
     auto rgba_out_opt = pb->get_rgba();
 
     if (!rgba_out_opt.has_value()) {
@@ -103,9 +105,12 @@ Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_processPhoto(JNIEnv* env, 
     }
 
     auto rgba_out = *rgba_out_opt;
-    auto size = rgba_out.get_i_format().width * rgba_out.get_i_format().height * rgba_out.bytes_per_pixel();
+
+
+    auto size = rgba_out.get_format().width * rgba_out.get_format().height * rgba_out.bytes_per_pixel()/*rgba_out.bytes_per_pixel()*/;
+    //auto size = static_cast<uint32_t>(width) * static_cast<uint32_t>(height) * 4/*rgba_out.bytes_per_pixel()*/;
     auto byte_array = env->NewByteArray(size);
-    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>(rgba_out.get_data()));
+    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>( data ));
     return byte_array;
 }
 

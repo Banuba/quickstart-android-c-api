@@ -12,7 +12,12 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
-add_subdirectory(offscreen_effect_player)
+set(BUILD_C_API ON)
+set(DESKTOP_BUILD OFF)
+set(NATIVE_MACOS_BUILD OFF)
+set(ANDROID_BUILD ON)
+
+add_subdirectory(oep)
 
 add_library( # Sets the name of the library.
              native-lib

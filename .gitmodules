@@ -1,0 +1,4 @@
+[submodule "app/src/main/cpp/oep"]
+	path = app/src/main/cpp/oep
+	url = https://github.com/PiotrBanuba/OEP-c-api-module.git
+	branch = submodule
