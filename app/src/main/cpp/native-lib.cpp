@@ -106,11 +106,9 @@ Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_processPhoto(JNIEnv* env, 
 
     auto rgba_out = *rgba_out_opt;
 
-
     auto size = rgba_out.get_format().width * rgba_out.get_format().height * rgba_out.bytes_per_pixel()/*rgba_out.bytes_per_pixel()*/;
-    //auto size = static_cast<uint32_t>(width) * static_cast<uint32_t>(height) * 4/*rgba_out.bytes_per_pixel()*/;
     auto byte_array = env->NewByteArray(size);
-    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>( data ));
+    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>(rgba_out.get_rgb_data_ptr()));
     return byte_array;
 }
 
