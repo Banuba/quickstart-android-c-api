@@ -3,30 +3,48 @@
 #include <bnb/error.h>
 #include <bnb/utility_manager.h>
 
-#include "offscreen_effect_player.hpp"
-#include "offscreen_render_target.hpp"
-#include "thread_pool.h"
+#include "effect_player.hpp"
+#include "render_context.hpp"
+#include "oep/interfaces/pixel_buffer.hpp"
+#include "oep/interfaces/image_format.hpp"
+#include "oep/interfaces/offscreen_effect_player.hpp"
+#include "oep/interfaces/offscreen_render_target.hpp"
 
 #include <android/log.h>
 #include <jni.h>
 
 #include <string>
-#include <thread>
 #include <vector>
-
-
-#define CHECK_ERROR(error)                                  \
-    do {                                                    \
-        if (error) {                                        \
-            std::string msg = bnb_error_get_message(error); \
-            bnb_error_destroy(error);                       \
-            throw std::runtime_error(msg);                  \
-        }                                                   \
-    } while (false);
 
 namespace
 {
-    std::string jstring2string(JNIEnv* env, jstring jstr)
+    struct banuba_sdk_manager
+    {
+        offscreen_effect_player_sptr oep{nullptr};
+
+        banuba_sdk_manager(const std::vector<std::string>& path_to_resources, const std::string& client_token)
+        {
+            /* Create instance of render_context */
+            auto rc = bnb::oep::interfaces::render_context::create();
+
+            /* Create an instance of our offscreen_render_target implementation, you can use your own.
+             * pass render_context */
+            auto ort = bnb::oep::interfaces::offscreen_render_target::create(rc);
+
+            /* Create an instance of effect_player implementation with cpp api, pass path to location of
+             * effects and client token */
+            auto ep = bnb::oep::interfaces::effect_player::create(path_to_resources, client_token);
+
+            /* Create instance of offscreen_effect_player, pass effect_player, offscreen_render_target
+             * and dimension of processing frame (for best performance it is better to coincide
+             * with camera frame dimensions) */
+            oep = bnb::oep::interfaces::offscreen_effect_player::create(ep, ort, 1, 1);
+        }
+
+        ~banuba_sdk_manager() = default;
+    }; /* struct banuba_sdk_manager */
+
+    std::string jstring_to_string(JNIEnv* env, jstring jstr)
     {
         const char* chars = env->GetStringUTFChars(jstr, NULL);
         std::string ret(chars);
@@ -34,85 +52,173 @@ namespace
         return ret;
     }
 
-    struct BanubaSdkManager
+    offscreen_effect_player_sptr get_offscreen_effect_player_from_jlong(jlong jsdk)
     {
-        ioep_sptr oep;
-
-        BanubaSdkManager(const std::vector<std::string>& path_to_resources, const std::string& client_token)
-        {
-            // Size of photo.jpg
-            int32_t width = 1000;
-            int32_t height = 1500;
-            bnb_effect_player_configuration_t ep_cfg{width, height, bnb_nn_mode_automatically, bnb_good, false, false};
-            auto ort = std::make_shared<bnb::offscreen_render_target>(width, height);
-            oep = bnb::interfaces::offscreen_effect_player::create(path_to_resources, client_token,
-                width, height, false, ort);
+        auto oep = reinterpret_cast<banuba_sdk_manager*>(jsdk)->oep;
+        if (oep == nullptr) {
+            print_message("error: get_offscreen_effect_player_from_jlong(): oep == nullptr\n");
         }
+        return oep;
+    }
+} /* namespace */
 
-        ~BanubaSdkManager() {}
-    };
-} // namespace
 
-
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_createEffectPlayer(JNIEnv* env, jobject thiz, jstring path_to_resources, jstring client_token)
+extern "C"
 {
-    std::vector<std::string> paths_r{jstring2string(env, path_to_resources)};
-    auto token = jstring2string(env, client_token);
-
-    auto sdk = new BanubaSdkManager(paths_r, token);
-    return (jlong) sdk;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_destroyEffectPlayer(JNIEnv* env, jobject thiz, jlong effect_player)
-{
-    auto sdk = (BanubaSdkManager*) effect_player;
-    delete sdk;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_loadEffect(JNIEnv* env, jobject thiz, jlong effect_player, jstring name)
-{
-    auto sdk = (BanubaSdkManager*) effect_player;
-    auto effect_name = jstring2string(env, name);
-
-    sdk->oep->load_effect(effect_name);
-}
-
-extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_processPhoto(JNIEnv* env, jobject thiz, jlong effect_player, jobject rgba, jint width, jint height)
-{
-    auto sdk = (BanubaSdkManager*) effect_player;
-
-    auto* data = static_cast<uint8_t*>(env->GetDirectBufferAddress(rgba));
-
-    bnb_image_format_t image_format{
-                static_cast<uint32_t>(width),
-                static_cast<uint32_t>(height),
-                bnb_image_orientation_t::BNB_DEG_0,
-                /* is_mirrored */ false,
-                /* face_orientation */ 0};
-
-    auto rgb_in = std::make_shared<rgb_image>(color_plane_weak(data), image_format, bnb_pixel_format_t::BNB_RGBA);
-    auto pb = sdk->oep->process_image(rgb_in);
-    auto rgba_out_opt = pb->get_rgba();
-
-    if (!rgba_out_opt.has_value()) {
-        throw std::runtime_error("Failed get_rgba from OEP");
+    /* OffscreenEffectPlayerexternalCreate - kotlin interface */
+    JNIEXPORT jlong JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalCreate(JNIEnv* env, jobject thiz, jstring jpath_to_resources, jstring jtoken)
+    {
+        std::vector<std::string> path{jstring_to_string(env, jpath_to_resources)};
+        auto token = jstring_to_string(env, jtoken);
+        auto oep = new banuba_sdk_manager(path, token);
+        return reinterpret_cast<jlong>(oep);
     }
 
-    auto rgba_out = *rgba_out_opt;
-    auto size = rgba_out.get_i_format().width * rgba_out.get_i_format().height * rgba_out.bytes_per_pixel();
-    auto byte_array = env->NewByteArray(size);
-    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>(rgba_out.get_data()));
-    return byte_array;
-}
+    /* OffscreenEffectPlayer::externalDestroy - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalDestroy(JNIEnv* env, jobject thiz, jlong jsdk)
+    {
+        auto sdk = reinterpret_cast<banuba_sdk_manager*>(jsdk);
+        if (sdk == nullptr) {
+            print_message("error: OffscreenEffectPlayer::externalDestroy(): sdk == nullptr\n");
+            return;
+        }
+        delete sdk;
+    }
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_banuba_sdk_example_quickstart_1cpp_BanubaSdk_surfaceChanged(JNIEnv* env, jobject thiz, jlong effect_player, jint width, jint height)
-{
-    auto sdk = (BanubaSdkManager*) effect_player;
+    /* OffscreenEffectPlayer::externalProcessImageAsync - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(JNIEnv* env, jobject thiz, jlong jsdk, jobject jimage, jint jwidth, jint jheight)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
 
-    sdk->oep->surface_changed(width, height);
-}
+        print_message("push frame");
+
+        auto* input_image_data = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimage));
+        auto width = static_cast<int32_t>(jwidth);
+        auto height = static_cast<int32_t>(jheight);
+
+        /* Create an image */
+        using ns_pb = bnb::oep::interfaces::pixel_buffer;
+        int32_t stride = width * 4;
+        ns_pb::plane_sptr rgba_plane_data(input_image_data, [](uint8_t*) { /* DO NOTHING */ });
+        ns_pb::plane_data rgba_plane{rgba_plane_data, static_cast<size_t>(stride * height), stride};
+        std::vector<ns_pb::plane_data> planes{rgba_plane};
+        auto pb_image = ns_pb::create(planes, bnb::oep::interfaces::image_format::bpc8_rgba, width, height, [](auto* pb) {});
+
+        JavaVM* jvm;
+        env->GetJavaVM(&jvm);
+        jobject this_ref = env->NewGlobalRef(thiz);
+
+        // Callback for received pixel buffer from the offscreen effect player
+        auto get_pixel_buffer_callback = [this_ref, jvm](image_processing_result_sptr result) {
+            if (result != nullptr) {
+                // Callback for update data in render thread
+                auto get_image_callback = [this_ref, jvm](pixel_buffer_sptr image) {
+                    if (image == nullptr) {
+                        return;
+                    }
+                    JNIEnv* env = nullptr;
+
+                    // double check it's all ok
+                    int getEnvStat = jvm->GetEnv((void**) &env, JNI_VERSION_1_6);
+                    if (getEnvStat == JNI_EDETACHED) {
+                        if (jvm->AttachCurrentThread((JNIEnv**) &env, nullptr) != JNI_OK) {
+                            print_message("GetEnv: Failed to attach");
+                            return;
+                        }
+                    } else if (getEnvStat == JNI_EVERSION) {
+                        print_message("GetEnv: version not supported");
+                        return;
+                    }
+
+                    jclass jcallback_class = env->GetObjectClass(this_ref);
+                    jmethodID jcallback_method = env->GetMethodID(jcallback_class, "dataReady", "([BII)V");
+
+                    auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
+                    auto byte_array = env->NewByteArray(size);
+                    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>((uint8_t*) image->get_base_sptr().get()));
+
+                    // call callback
+                    env->CallVoidMethod(this_ref, jcallback_method, byte_array, image->get_width(), image->get_height());
+
+                    if (env->ExceptionCheck()) {
+                        env->ExceptionDescribe();
+                    }
+                    env->DeleteGlobalRef(this_ref);
+
+                    jvm->DetachCurrentThread();
+                };
+                // Get image from effect_player and return it in the callback
+                result->get_image(bnb::oep::interfaces::image_format::bpc8_rgba, get_image_callback);
+            }
+        };
+        oep->process_image_async(pb_image, bnb::oep::interfaces::rotation::deg0, get_pixel_buffer_callback, bnb::oep::interfaces::rotation::deg180);
+    }
+
+    /* OffscreenEffectPlayer::externalSurfaceChanged - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalSurfaceChanged(JNIEnv* env, jobject thiz, jlong jsdk, jint jwidth, jint jheight)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        auto width = static_cast<int32_t>(jwidth);
+        auto height = static_cast<int32_t>(jheight);
+        oep->surface_changed(width, height);
+    }
+
+    /* OffscreenEffectPlayer::externalLoadEffect - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalLoadEffect(JNIEnv* env, jobject thiz, jlong jsdk, jstring jpath)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        auto path = jstring_to_string(env, jpath);
+        oep->load_effect(path);
+    }
+
+    /* OffscreenEffectPlayer::externalUnloadEffect - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalUnloadEffect(JNIEnv* env, jobject thiz, jlong jsdk)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        oep->unload_effect();
+    }
+
+    /* OffscreenEffectPlayer::externalPause - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalPause(JNIEnv* env, jobject thiz, jlong jsdk)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        oep->pause();
+    }
+
+    /* OffscreenEffectPlayer::externalResume - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalResume(JNIEnv* env, jobject thiz, jlong jsdk)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        oep->resume();
+    }
+
+    /* OffscreenEffectPlayer::externalCallJsMethod - kotlin interface */
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalCallJsMethod(JNIEnv* env, jobject thiz, jlong jsdk, jstring jmethod, jstring jparams)
+    {
+        auto oep = get_offscreen_effect_player_from_jlong(jsdk);
+        if (oep == nullptr) {
+            return;
+        }
+        auto method = jstring_to_string(env, jmethod);
+        auto params = jstring_to_string(env, jparams);
+        oep->call_js_method(method, params);
+    }
+} /* extern "C" */
