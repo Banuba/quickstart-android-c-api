@@ -3,13 +3,12 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion "29.0.2"
+    compileSdkVersion 31
 
     defaultConfig {
-        applicationId "com.banuba.sdk.example.quickstart_cpp"
+        applicationId "com.banuba.sdk.example.quickstart_c_api"
         minSdkVersion 24
-        targetSdkVersion 28
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
 
