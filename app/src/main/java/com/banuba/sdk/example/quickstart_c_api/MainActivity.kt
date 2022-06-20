@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
         ResourcesExtractor.prepare(application.assets, pathToResources)
 
         oep.create(pathToResources, BANUBA_CLIENT_TOKEN)
-        oep.loadEffect("effects/Afro")
+        oep.loadEffect("effects/blur_bg")
 
         var contentViewIsInit = false
         oep.setDataReadyCallback{ image: ByteArray, width: Int, height: Int ->
