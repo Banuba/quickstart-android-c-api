@@ -1,7 +1,7 @@
 Quick start examples for integrating [Banuba SDK on Android](https://docs.banuba.com/face-ar-sdk/android/android_overview) in C++ apps.
 
 **Important**
-Please use [v0.x](../../tree/v0.x) branch for SDK version 0.x (e.g. v0.41).
+Please use [v0.x](../../tree/v0.x) branch for SDK version 0.x (e.g. v0.38).
 
 # Getting Started
 
