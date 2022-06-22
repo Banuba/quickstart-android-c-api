@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.renderscript.RenderScript
 import android.renderscript.Allocation
 import android.renderscript.ScriptIntrinsicYuvToRGB
-import android.media.Image.Plane
 import android.graphics.ImageFormat
 import android.media.Image
 import android.renderscript.Element
