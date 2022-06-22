@@ -1,7 +1,7 @@
 Quick start examples for integrating [Banuba SDK on Android](https://docs.banuba.com/face-ar-sdk/android/android_overview) in C++ apps.
 
 **Important**
-Please use [v0.x](../../tree/v0.x) branch for SDK version 0.x (e.g. v0.38).
+Please use [v0.x](../../tree/v0.x) branch for SDK version 0.x (e.g. v0.41).
 
 # Getting Started
 
@@ -17,7 +17,6 @@ Please use [v0.x](../../tree/v0.x) branch for SDK version 0.x (e.g. v0.38).
     `BNBEffectPlayer/banuba_effect_player_c_api-release.aar` => `quickstart-android-c-api/app/libs/banuba_effect_player_c_api-release.aar`
 4. Copy and Paste your client token into appropriate section of `com/banuba/sdk/example/common/BanubaClientToken.kt`
 5. Open the project in Android Studio and run the necessary target using the usual steps.
-
 
 # Contributing
 
