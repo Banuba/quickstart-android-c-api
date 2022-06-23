@@ -1,6 +1,5 @@
 package com.banuba.sdk.example.quickstart_c_api
 
-
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -23,12 +22,12 @@ import java.nio.ByteBuffer
 
 
 class MainActivity : AppCompatActivity() {
-    var oep = OffscreenEffectPlayer()
-    private val WIDTH = 1280
-    private val HEIGHT = 720
-    private val PERMISSION_REQUEST_CAMERA = 10
     var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>? = null
+    var oep = OffscreenEffectPlayer()
     var translator = YUVtoRGB()
+    private val default_height = 720
+    private val default_width = 1280
+    private val permission_request_camera = 10
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ContextProvider.setContext(applicationContext)
@@ -38,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         val pathToResources = application.filesDir.absolutePath + "/bnb-resources"
         ResourcesExtractor.prepare(application.assets, pathToResources)
         oep.create(pathToResources, BANUBA_CLIENT_TOKEN)
-        oep.surfaceChanged(WIDTH, HEIGHT)
+        oep.surfaceChanged(default_width, default_height)
         oep.loadEffect("effects/virtual-background")
         oep.setDataReadyCallback{ image: ByteArray, width: Int, height: Int ->
             runOnUiThread {
@@ -50,12 +49,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
+            != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this, arrayOf(Manifest.permission.CAMERA),
-                PERMISSION_REQUEST_CAMERA
-            )
+                permission_request_camera)
         } else {
             startCamera()
         }
@@ -74,7 +71,7 @@ class MainActivity : AppCompatActivity() {
                 val cameraProvider = cameraProviderFuture!!.get()
 
                 val imageAnalysis = ImageAnalysis.Builder()
-                    .setTargetResolution(Size(WIDTH, HEIGHT))
+                    .setTargetResolution(Size(default_width, default_height))
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 val cameraSelector = CameraSelector.Builder()
@@ -85,12 +82,12 @@ class MainActivity : AppCompatActivity() {
                         val img: Image? = imageProxy.image
                         val bitmap: Bitmap? = img?.let { translator.translateYUV(it, this@MainActivity) }
 
-                        val width = (bitmap?.rowBytes ?: 0)
-                        val height = (bitmap?.height!!)
-                        val byteBuffer: ByteBuffer? = ByteBuffer.allocateDirect( width * height)
-                        bitmap.copyPixelsToBuffer(byteBuffer)
-                        if (byteBuffer != null) {
-                            oep.processImageAsync(byteBuffer, WIDTH, HEIGHT)
+                        val width = bitmap?.rowBytes ?: 0
+                        val height = bitmap?.height!!
+                        val byte_buffer: ByteBuffer? = ByteBuffer.allocateDirect( width * height)
+                        bitmap.copyPixelsToBuffer(byte_buffer)
+                        if (byte_buffer != null) {
+                            oep.processImageAsync(byte_buffer, default_width, default_height)
                         }
 
                         //  after done, release the ImageProxy object
@@ -105,13 +102,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int,
+                                            permissions: Array<String?>,
+                                            grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CAMERA && grantResults.isNotEmpty()
+        if (requestCode == permission_request_camera && grantResults.isNotEmpty()
             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         }
