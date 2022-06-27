@@ -37,6 +37,8 @@ namespace bnb::oep
 
         void draw() override;
 
+        void stop() override;
+
     private:
         bnb_image_format_t make_bnb_image_format(pixel_buffer_sptr image, interfaces::rotation orientation);
         bnb_pixel_format_t make_bnb_pixel_format(pixel_buffer_sptr image);

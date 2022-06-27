@@ -6,28 +6,23 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.Image
 import android.os.Bundle
-import android.util.Size
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.common.util.concurrent.ListenableFuture
-import android.util.Log
 import com.banuba.sdk.example.common.BANUBA_CLIENT_TOKEN
 import com.banuba.sdk.utils.ContextProvider
+import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.android.synthetic.main.activity_main.*
 import java.nio.ByteBuffer
-
 
 class MainActivity : AppCompatActivity() {
     var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>? = null
     var oep = OffscreenEffectPlayer()
-    var translator = YUVtoRGB()
-    private val default_height = 720
-    private val default_width = 1280
-    private val permission_request_camera = 10
+    private val permissionRequestCamera = 10
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ContextProvider.setContext(applicationContext)
@@ -37,25 +32,16 @@ class MainActivity : AppCompatActivity() {
         val pathToResources = application.filesDir.absolutePath + "/bnb-resources"
         ResourcesExtractor.prepare(application.assets, pathToResources)
         oep.create(pathToResources, BANUBA_CLIENT_TOKEN)
-        oep.surfaceChanged(default_width, default_height)
-        oep.loadEffect("effects/virtual-background")
+
+        oep.loadEffect("effects/Afro")
         oep.setDataReadyCallback{ image: ByteArray, width: Int, height: Int ->
             runOnUiThread {
                 val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image))
-                // show processing result
                 imageView.setImageBitmap(bmp)
             }
         }
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.CAMERA),
-                permission_request_camera)
-        } else {
-            startCamera()
-        }
+        startCamera()
     }
 
     override fun onDestroy() {
@@ -63,34 +49,41 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    @SuppressLint("UnsafeOptInUsageError", "UnsafeExperimentalUsageError")
     private fun startCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.CAMERA),
+                permissionRequestCamera)
+        } else {
+            makePicture()
+        }
+    }
+
+    @SuppressLint("UnsafeOptInUsageError", "UnsafeExperimentalUsageError")
+    private fun makePicture() {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture!!.addListener( Runnable {
             try {
                 val cameraProvider = cameraProviderFuture!!.get()
 
                 val imageAnalysis = ImageAnalysis.Builder()
-                    .setTargetResolution(Size(default_width, default_height))
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 val cameraSelector = CameraSelector.Builder()
                     .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                     .build()
                 imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this@MainActivity),
-                    ImageAnalysis.Analyzer { imageProxy ->
-                        val img: Image? = imageProxy.image
-                        val bitmap: Bitmap? = img?.let { translator.translateYUV(it, this@MainActivity) }
-
-                        val width = bitmap?.rowBytes ?: 0
-                        val height = bitmap?.height!!
-                        val byte_buffer: ByteBuffer? = ByteBuffer.allocateDirect( width * height)
-                        bitmap.copyPixelsToBuffer(byte_buffer)
-                        if (byte_buffer != null) {
-                            oep.processImageAsync(byte_buffer, default_width, default_height)
+                    ImageAnalysis.Analyzer { imageProxy ->  // YUV_420_888
+                        val image = imageProxy.image
+                        val image_buffer = image?.let { imageToByteBuffer(it) }
+                        val width =  image?.width
+                        val height =  image?.height
+                        if (image_buffer != null && width != null && height != null) {
+                            oep.surfaceChanged(width, height)
+                            oep.processImageAsync(image_buffer, width, height)
                         }
 
-                        //  after done, release the ImageProxy object
                         imageProxy.close()
                     }
                 )
@@ -106,9 +99,25 @@ class MainActivity : AppCompatActivity() {
                                             permissions: Array<String?>,
                                             grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == permission_request_camera && grantResults.isNotEmpty()
+        if (requestCode == permissionRequestCamera && grantResults.isNotEmpty()
             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         }
     }
 }
+
+fun imageToByteBuffer(image: Image): ByteBuffer {
+    val yBuffer: ByteBuffer = image.planes[0].buffer
+    val uBuffer: ByteBuffer = image.planes[1].buffer
+    val vBuffer: ByteBuffer = image.planes[2].buffer
+    val ySize = yBuffer.remaining()
+    val uSize = uBuffer.remaining()
+    val vSize = vBuffer.remaining()
+    val output = ByteBuffer.allocateDirect(ySize + uSize + vSize)
+
+    yBuffer[output.array(), 0, ySize]
+    uBuffer[output.array(), ySize, uSize]
+    vBuffer[output.array(), ySize + vSize, vSize]
+    return output
+}
+
