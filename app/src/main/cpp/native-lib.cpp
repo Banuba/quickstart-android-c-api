@@ -86,14 +86,14 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalProcessImageAsync - kotlin interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(JNIEnv* env, jobject thiz, jlong jsdk, jobject jimage, jint jwidth, jint jheight)
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
+            JNIEnv* env, jobject thiz, jlong jsdk,
+            jobject jimage, jint jwidth, jint jheight)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
             return;
         }
-
-        print_message("push frame");
         auto width = static_cast<int32_t>(jwidth);
         auto height = static_cast<int32_t>(jheight);
 
@@ -117,7 +117,6 @@ extern "C"
 
         std::vector<ns_pb::plane_data> planes{y_plane, u_plane, v_plane};
         auto format = bnb::oep::interfaces::image_format::i420_bt709_full;
-//        auto format = bnb::oep::interfaces::image_format::i420_bt601_full;
         auto pb_image = ns_pb::create(planes, format, width, height, [](auto* pb) {});
 
         JavaVM* jvm;
@@ -167,7 +166,9 @@ extern "C"
                 result->get_image(bnb::oep::interfaces::image_format::bpc8_rgba, get_image_callback);
             }
         };
-        oep->process_image_async(pb_image, bnb::oep::interfaces::rotation::deg0, get_pixel_buffer_callback, bnb::oep::interfaces::rotation::deg90);
+        auto in_rotation = bnb::oep::interfaces::rotation::deg0;
+        auto out_rotation = bnb::oep::interfaces::rotation::deg90;
+        oep->process_image_async(pb_image, in_rotation, get_pixel_buffer_callback, out_rotation);
     }
 
     /* OffscreenEffectPlayer::externalSurfaceChanged - kotlin interface */

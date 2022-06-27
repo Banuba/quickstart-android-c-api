@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         ResourcesExtractor.prepare(application.assets, pathToResources)
         oep.create(pathToResources, BANUBA_CLIENT_TOKEN)
 
-        oep.loadEffect("effects/Afro")
+        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>")
         oep.setDataReadyCallback{ image: ByteArray, width: Int, height: Int ->
             runOnUiThread {
                 val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -76,14 +76,13 @@ class MainActivity : AppCompatActivity() {
                 imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this@MainActivity),
                     ImageAnalysis.Analyzer { imageProxy ->  // YUV_420_888
                         val image = imageProxy.image
-                        val image_buffer = image?.let { imageToByteBuffer(it) }
+                        val imageBuffer = image?.let { imageToByteBuffer(it) }
                         val width =  image?.width
                         val height =  image?.height
-                        if (image_buffer != null && width != null && height != null) {
+                        if (imageBuffer != null && width != null && height != null) {
                             oep.surfaceChanged(width, height)
-                            oep.processImageAsync(image_buffer, width, height)
+                            oep.processImageAsync(imageBuffer, width, height)
                         }
-
                         imageProxy.close()
                     }
                 )
