@@ -13,6 +13,7 @@ Quick start examples for integrating [Banuba SDK on Android](https://docs.banuba
     `BNBEffectPlayer/include` => `quickstart-android-c-api/app/libs/include`
     `BNBEffectPlayer/banuba_effect_player_c_api-release.aar` => `quickstart-android-c-api/app/libs/banuba_effect_player_c_api-release.aar`
 4. Copy and Paste your client token into appropriate section of `com/banuba/sdk/example/common/BanubaClientToken.kt`
+5. Configure effect in the appropriate section of `com/banuba/sdk/example/quickstart_c_api/MainActivity.java`, e.g. effects/test_BG The effects folder should be located in the `app/src/main/assets/` folder. More effects can be found [here](https://docs.banuba.com/face-ar-sdk-v1/overview/demo_face_filters)
 5. Open the project in Android Studio and run the necessary target using the usual steps.
 
 # Contributing

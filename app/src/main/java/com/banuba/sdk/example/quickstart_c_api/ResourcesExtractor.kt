@@ -9,7 +9,7 @@ class ResourcesExtractor {
     companion object {
         private val TAG = "ResourcesExtractor"
 
-        fun prepare(assets: AssetManager, resPath: String) {
+        public fun prepare(assets: AssetManager, resPath: String) {
             prepareResources(assets, resPath);
             prepareEffects(assets, resPath);
         }
