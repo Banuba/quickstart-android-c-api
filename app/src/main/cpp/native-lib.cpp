@@ -190,7 +190,7 @@ extern "C"
                     auto byte_array = env->NewByteArray(size);
                     env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>(buf));
 
-                    jclass jcallback_class = env->FindClass("");
+                    jclass jcallback_class = env->GetObjectClass(this_ref);
                     jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([BII)V");
 
                     // call callback

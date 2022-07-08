@@ -69,6 +69,10 @@ class OffscreenEffectPlayer {
         externalStop(mOep);
     }
 
+    public void callJsMethod(String method, String param) {
+        externalCallJsMethod(mOep, method, param);
+    }
+
     public void evalJs(String script) {
         externalEvalJs(mOep, script);
     }
@@ -99,6 +103,7 @@ class OffscreenEffectPlayer {
     private native void externalPause(long oep);
     private native void externalResume(long oep);
     private native void externalStop(long oep);
+    private native void externalCallJsMethod(long oep, String method, String param);
     private native void externalEvalJs(long oep, String script);
 
     static {
