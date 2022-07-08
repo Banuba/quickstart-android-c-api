@@ -6,7 +6,7 @@ android {
     compileSdkVersion 31
 
     defaultConfig {
-        applicationId "com.banuba.sdk.example.quickstart_c_api"
+        applicationId "com.banuba.quickstart_c_api"
         minSdkVersion 24
         targetSdkVersion 31
         versionCode 1

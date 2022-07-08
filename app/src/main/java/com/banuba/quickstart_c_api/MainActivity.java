@@ -1,8 +1,9 @@
-package com.banuba.sdk.example.quickstart_c_api;
+package com.banuba.quickstart_c_api;
 
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.media.Image;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
@@ -19,8 +20,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-
-import com.banuba.sdk.example.common.BanubaClientTokenKt;
+import com.banuba.quickstart_c_api.R;
 import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -70,11 +70,13 @@ public class MainActivity extends AppCompatActivity  {
         glView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         /* initialize Banuba SDK */
-        OffscreenEffectPlayer.init(pathToResources, BanubaClientTokenKt.BANUBA_CLIENT_TOKEN);
+        OffscreenEffectPlayer.init(pathToResources, BanubaClientToken.KEY);
         /* Create offscreen effect player */
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
         oep.loadEffect(<#Place the effect name here, e.g. effects/test_BG#>);
         oep.setDataReadyCallback((image, width, height) -> {
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image));
             renderer.drawRGBAImage(image, width, height);
             glView.requestRender();
         });

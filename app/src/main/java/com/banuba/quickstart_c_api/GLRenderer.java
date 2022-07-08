@@ -1,4 +1,4 @@
-package com.banuba.sdk.example.quickstart_c_api;
+package com.banuba.quickstart_c_api;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -145,11 +145,6 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             0.0f, yScale, 0.0f,
             0.0f, 0.0f, 1.0f
         };
-        final FloatBuffer textureMat3 = ByteBuffer.allocateDirect(floatSize * 3 * 3)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .put(mat3);
-        textureMat3.position(0);
 
         GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);

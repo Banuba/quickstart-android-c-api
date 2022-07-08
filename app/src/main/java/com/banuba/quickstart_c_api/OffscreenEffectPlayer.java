@@ -1,4 +1,4 @@
-package com.banuba.sdk.example.quickstart_c_api;
+package com.banuba.quickstart_c_api;
 
 import java.nio.ByteBuffer;
 

@@ -16,6 +16,9 @@
 #include <string>
 #include <vector>
 
+#include <stdio.h>
+#include <libyuv.h>
+
 namespace
 {
     struct banuba_sdk_manager
@@ -84,7 +87,7 @@ extern "C"
     static utility_manager_holder_t* utility = nullptr;
 
     /* OffscreenEffectPlayer::externalInit - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalInit(JNIEnv* env, jclass clazz, jstring jpath_to_resources, jstring jtoken)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalInit(JNIEnv* env, jclass clazz, jstring jpath_to_resources, jstring jtoken)
     {
         assert(utility == nullptr);
         std::vector<std::string> path{jstring_to_string(env, jpath_to_resources)};
@@ -96,7 +99,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalDeinit - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalDeinit(JNIEnv* env, jclass clazz)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDeinit(JNIEnv* env, jclass clazz)
     {
         assert(utility != nullptr);
         bnb_utility_manager_release(utility, nullptr);
@@ -104,7 +107,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalCreate - java interface */
-    JNIEXPORT jlong JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalCreate(JNIEnv* env, jobject thiz, jint jwidth, jint jheight)
+    JNIEXPORT jlong JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalCreate(JNIEnv* env, jobject thiz, jint jwidth, jint jheight)
     {
         int32_t width = jwidth;
         int32_t height = jheight;
@@ -113,7 +116,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalDestroy - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalDestroy(JNIEnv* env, jobject thiz, jlong jsdk)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDestroy(JNIEnv* env, jobject thiz, jlong jsdk)
     {
         auto sdk = reinterpret_cast<banuba_sdk_manager*>(jsdk);
         if (sdk == nullptr) {
@@ -124,7 +127,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalProcessImageAsync - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
             JNIEnv* env, jobject thiz, jlong jsdk,
             jobject jimage, jint jwidth, jint jheight, jint input_rotation,
             jboolean require_mirroring, jint output_orientation)
@@ -160,10 +163,10 @@ extern "C"
         jobject this_ref = env->NewGlobalRef(thiz);
 
         // Callback for received pixel buffer from the offscreen effect player
-        auto get_pixel_buffer_callback = [this_ref, jvm](image_processing_result_sptr result) {
+        auto get_pixel_buffer_callback = [this_ref, jvm, pb_image](image_processing_result_sptr result) {
             if (result != nullptr) {
                 // Callback for update data in render thread
-                auto get_image_callback = [this_ref, jvm](pixel_buffer_sptr image) {
+                auto get_image_callback = [this_ref, jvm, pb_image](pixel_buffer_sptr image) {
                     JNIEnv* env = nullptr;
 
                     // double check it's all ok
@@ -212,7 +215,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalSurfaceChanged - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalSurfaceChanged(JNIEnv* env, jobject thiz, jlong jsdk, jint jwidth, jint jheight)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalSurfaceChanged(JNIEnv* env, jobject thiz, jlong jsdk, jint jwidth, jint jheight)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -224,7 +227,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalLoadEffect - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalLoadEffect(JNIEnv* env, jobject thiz, jlong jsdk, jstring jpath)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalLoadEffect(JNIEnv* env, jobject thiz, jlong jsdk, jstring jpath)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -235,7 +238,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalUnloadEffect - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalUnloadEffect(JNIEnv* env, jobject thiz, jlong jsdk)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalUnloadEffect(JNIEnv* env, jobject thiz, jlong jsdk)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -245,7 +248,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalPause - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalPause(JNIEnv* env, jobject thiz, jlong jsdk)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalPause(JNIEnv* env, jobject thiz, jlong jsdk)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -255,7 +258,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalResume - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalResume(JNIEnv* env, jobject thiz, jlong jsdk)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalResume(JNIEnv* env, jobject thiz, jlong jsdk)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -265,7 +268,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalStop - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalStop(JNIEnv* env, jobject thiz, jlong jsdk)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalStop(JNIEnv* env, jobject thiz, jlong jsdk)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -275,7 +278,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalCallJsMethod - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalCallJsMethod(JNIEnv* env, jobject thiz, jlong jsdk, jstring jmethod, jstring jparam)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalCallJsMethod(JNIEnv* env, jobject thiz, jlong jsdk, jstring jmethod, jstring jparam)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -287,7 +290,7 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalEvalJs - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalEvalJs(JNIEnv* env, jobject thiz, jlong jsdk, jstring jscript)
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalEvalJs(JNIEnv* env, jobject thiz, jlong jsdk, jstring jscript)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
