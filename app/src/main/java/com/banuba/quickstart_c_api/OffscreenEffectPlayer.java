@@ -41,6 +41,7 @@ class OffscreenEffectPlayer {
         }
     }
 
+    /* image must be NV12 format */
     public void processImageAsync(ByteBuffer image, int width, int height, int inputRotation, boolean requireMirroring, int outputOrientation) {
         externalProcessImageAsync(mOep, image, width, height, inputRotation, requireMirroring, outputOrientation);
     }

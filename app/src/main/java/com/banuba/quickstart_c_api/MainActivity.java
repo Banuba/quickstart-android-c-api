@@ -123,6 +123,7 @@ public class MainActivity extends AppCompatActivity  {
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
                             Image image = proxy.getImage();
+                            /* NV12 image */
                             ByteBuffer imageBuffer = imageToByteBuffer(image);
 
                             int rotation = getRotation(MainActivity.this);

@@ -2,8 +2,6 @@ package com.banuba.quickstart_c_api;
 
 import android.opengl.GLES20;
 
-import java.nio.FloatBuffer;
-
 public class GLShaderProgram {
     private static final String TAG = "GLShaderProgram";
     private int mShaderProgram = 0;
@@ -55,8 +53,8 @@ public class GLShaderProgram {
         GLES20.glUniform1i(uniform, texture);
     }
 
-    public void setUniformMat3(int uniform, float[] mat3) {
-        GLES20.glUniformMatrix3fv(uniform, 1, false, mat3, 0);
+    public void setUniformMat4(int uniform, float[] mat4) {
+        GLES20.glUniformMatrix4fv(uniform, 1, false, mat4, 0);
     }
 
     protected void finalize() {
