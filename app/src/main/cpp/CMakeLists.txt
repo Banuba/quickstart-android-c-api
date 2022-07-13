@@ -65,7 +65,7 @@ add_library(banuba INTERFACE)
 target_link_libraries(
     banuba
     INTERFACE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../libs/lib/${ANDROID_ABI}/libeffect_player_wrap.so")
+    "${CMAKE_CURRENT_LIST_DIR}/../../../libs/lib/${ANDROID_ABI}/libBNBEffectPlayerC.so")
 
 target_include_directories(
     banuba
