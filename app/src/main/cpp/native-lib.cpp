@@ -148,15 +148,20 @@ extern "C"
 
         /* Create an image */
         using ns_pb = bnb::oep::interfaces::pixel_buffer;
-        ns_pb::plane_sptr y_plane_data(y_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
-        ns_pb::plane_sptr uv_plane_data(uv_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
+        ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
+        std::memcpy(y_plane_data.get(), y_plane_data_ptr, y_size);
 
-        ns_pb::plane_data y_plane{y_plane_data, static_cast<size_t>(y_size), width};
-        ns_pb::plane_data uv_plane{uv_plane_data, static_cast<size_t>(uv_size), width};
+        ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
+        std::memcpy(uv_plane_data.get(), uv_plane_data_ptr, uv_size);
+//        ns_pb::plane_sptr y_plane_data(y_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
+//        ns_pb::plane_sptr uv_plane_data(uv_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
 
-        std::vector<ns_pb::plane_data> planes{y_plane, uv_plane};
+        ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), width};
+        ns_pb::plane_data uv_plane{std::move(uv_plane_data), static_cast<size_t>(uv_size), width};
+
+        std::vector<ns_pb::plane_data> planes{std::move(y_plane), std::move(uv_plane)};
         auto format = bnb::oep::interfaces::image_format::nv12_bt601_full;
-        auto pb_image = ns_pb::create(planes, format, width, height, [](auto* pb) {});
+        auto pb_image = ns_pb::create(planes, format, width, height, [](auto* pb) { delete pb; });
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
