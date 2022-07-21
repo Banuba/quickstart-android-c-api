@@ -129,7 +129,8 @@ extern "C"
     /* OffscreenEffectPlayer::externalProcessImageAsync - java interface */
     JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
             JNIEnv* env, jobject thiz, jlong jsdk,
-            jobject jimage, jint jwidth, jint jheight, jint input_rotation,
+            jobject jimageY, jobject jimageU, jobject jimageV,
+            jint jwidth, jint jheight, jint input_rotation,
             jboolean require_mirroring, jint output_orientation)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
@@ -139,22 +140,21 @@ extern "C"
         auto width = static_cast<int32_t>(jwidth);
         auto height = static_cast<int32_t>(jheight);
 
-        uint8_t* input_image_data = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimage));
+        uint8_t* input_image_dataY = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageY));
+        uint8_t* input_image_dataUV = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageU));
         int y_size = width * height;
         int uv_size = width * height / 2;
 
-        uint8_t* y_plane_data_ptr = input_image_data;
-        uint8_t* uv_plane_data_ptr = input_image_data + y_size;
+//        uint8_t* y_plane_data_ptr = input_image_dataY;
+//        uint8_t* uv_plane_data_ptr = input_image_dataUV;
 
         /* Create an image */
         using ns_pb = bnb::oep::interfaces::pixel_buffer;
         ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
-        std::memcpy(y_plane_data.get(), y_plane_data_ptr, y_size);
+        std::memcpy(y_plane_data.get(), input_image_dataY, y_size);
 
         ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
-        std::memcpy(uv_plane_data.get(), uv_plane_data_ptr, uv_size);
-//        ns_pb::plane_sptr y_plane_data(y_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
-//        ns_pb::plane_sptr uv_plane_data(uv_plane_data_ptr, [](uint8_t*) { /* DO NOTHING */ });
+        std::memcpy(uv_plane_data.get(), input_image_dataUV, uv_size);
 
         ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), width};
         ns_pb::plane_data uv_plane{std::move(uv_plane_data), static_cast<size_t>(uv_size), width};

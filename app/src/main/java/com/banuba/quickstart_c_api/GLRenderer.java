@@ -48,7 +48,13 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     private int[] mVBO;
     private int[] mVAO;
     private int[] mTexture;
-
+    private final float[] mMat4 = {
+            0, 0.0f, 0.0f, 0.0f,
+            0.0f, 0, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+    };
+    private ByteBuffer mBuffer = null;
     final int vertLen = 4; /* Number of vertices */
 
     /* initialize of OpenGL drawing */
@@ -105,6 +111,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             e.printStackTrace();
         }
         mIsCreated = true;
+        mBuffer = ByteBuffer.wrap(mImageData);
     }
 
     /* destructor */
@@ -144,10 +151,9 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        final byte[] imageData = mImageData;
         final int imageWidth = mImageWidth;
         final int imageHeight = mImageHeight;
-        if (!mIsCreated || imageData == null) {
+        if (!mIsCreated || mImageData == null) {
             return;
         }
 
@@ -156,12 +162,8 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         float imageRatio = ((float)imageWidth) / ((float)imageHeight);
         float xScale = imageRatio < viewportRatio ? imageRatio / viewportRatio : 1.0f;
         float yScale = viewportRatio < imageRatio ? viewportRatio / imageRatio : 1.0f;
-        final float[] mat4 = {
-            xScale, 0.0f, 0.0f, 0.0f,
-            0.0f, yScale, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-        };
+        mMat4[0] = xScale;
+        mMat4[5] = yScale;
 
         /* clear background */
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
@@ -173,11 +175,11 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         /* update texture */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, imageWidth, imageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, ByteBuffer.wrap(imageData));
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, imageWidth, imageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mBuffer);
 
         /* set uniforms */
         mShaderProgram.setUniformTexture(mUniformTexture, 0);
-        mShaderProgram.setUniformMat4(mUniformMatrix, mat4);
+        mShaderProgram.setUniformMat4(mUniformMatrix, mMat4);
 
         /* draw */
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertLen);

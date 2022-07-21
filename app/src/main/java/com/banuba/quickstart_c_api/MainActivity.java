@@ -122,10 +122,6 @@ public class MainActivity extends AppCompatActivity  {
                 imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
-                            Image image = proxy.getImage();
-                            /* NV12 image */
-                            ByteBuffer imageBuffer = imageToByteBuffer(image);
-
                             int rotation = getRotation(MainActivity.this);
                             int inputOrientation = 0;
                             int outputOrientation = 0;
@@ -147,7 +143,12 @@ public class MainActivity extends AppCompatActivity  {
                                     outputOrientation = 0;
                                     break;
                             }
-                            oep.processImageAsync(imageBuffer, image.getWidth(), image.getHeight(), inputOrientation, false, outputOrientation);
+                            oep.processImageAsync(
+                                    proxy.getPlanes()[0].getBuffer(),
+                                    proxy.getPlanes()[1].getBuffer(),
+                                    proxy.getPlanes()[2].getBuffer(),
+                                    proxy.getWidth(), proxy.getHeight(), inputOrientation,
+                                    false, outputOrientation);
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);
