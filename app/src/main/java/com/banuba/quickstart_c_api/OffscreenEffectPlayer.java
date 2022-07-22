@@ -42,8 +42,8 @@ class OffscreenEffectPlayer {
     }
 
     /* image must be NV12 format */
-    public void processImageAsync(ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV, int width, int height, int inputRotation, boolean requireMirroring, int outputOrientation) {
-        externalProcessImageAsync(mOep, imageY, imageU, imageV, width, height, inputRotation, requireMirroring, outputOrientation);
+    public void processImageAsync(ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV, ImageInfo info) {
+        externalProcessImageAsync(mOep, imageY, imageU, imageV, info);
     }
 
     public void surfaceChanged(int width, int height) {
@@ -97,8 +97,7 @@ class OffscreenEffectPlayer {
     private static native void externalDeinit();
     private native long externalCreate(int width, int height);
     private native void externalDestroy(long oep);
-    private native void externalProcessImageAsync(long oep, ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV,
-                                                  int width, int height, int inputRotation, boolean requireMirroring, int outputOrientation);
+    private native void externalProcessImageAsync(long oep, ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV, ImageInfo info);
     private native void externalSurfaceChanged(long oep, int width, int height);
     private native void externalLoadEffect(long oep, String effectPath);
     private native void externalUnloadEffect(long oep);
@@ -111,4 +110,33 @@ class OffscreenEffectPlayer {
     static {
         System.loadLibrary("native-lib");
     }
+}
+
+class ImageInfo {
+    ImageInfo() {
+        width = 0;
+        height = 0;
+        inputOrientation = 0;
+        outputOrientation = 0;
+        requireMirroring = false;
+        rowStride0 = 0;
+        rowStride1 = 0;
+        rowStride2 = 0;
+        pixelStride0 = 0;
+        pixelStride1 = 0;
+        pixelStride2 = 0;
+        pixelFormat = 0;
+    }
+    public int width;
+    public int height;
+    public int inputOrientation;
+    public int outputOrientation;
+    public int rowStride0;
+    public int rowStride1;
+    public int rowStride2;
+    public int pixelStride0;
+    public int pixelStride1;
+    public int pixelStride2;
+    public int pixelFormat;
+    public boolean requireMirroring;
 }

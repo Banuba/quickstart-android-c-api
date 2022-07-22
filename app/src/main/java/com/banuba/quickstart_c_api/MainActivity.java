@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity  {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
+    private ImageInfo imageInfo = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -80,7 +81,7 @@ public class MainActivity extends AppCompatActivity  {
             renderer.drawRGBAImage(image, width, height);
             glView.requestRender();
         });
-
+        imageInfo = new ImageInfo();
         requestCameraPermissionAndStart();
     }
 
@@ -143,12 +144,23 @@ public class MainActivity extends AppCompatActivity  {
                                     outputOrientation = 0;
                                     break;
                             }
+
+                            imageInfo.width = proxy.getWidth();
+                            imageInfo.height = proxy.getHeight();
+                            imageInfo.inputOrientation = inputOrientation;
+                            imageInfo.outputOrientation = outputOrientation;
+                            imageInfo.rowStride0 = proxy.getPlanes()[0].getRowStride();
+                            imageInfo.rowStride1 = proxy.getPlanes()[1].getRowStride();
+                            imageInfo.rowStride2 = proxy.getPlanes()[2].getRowStride();
+                            imageInfo.pixelStride0 = proxy.getPlanes()[0].getPixelStride();
+                            imageInfo.pixelFormat = proxy.getImage().getFormat();
+                            imageInfo.requireMirroring = false;
+
                             oep.processImageAsync(
                                     proxy.getPlanes()[0].getBuffer(),
                                     proxy.getPlanes()[1].getBuffer(),
                                     proxy.getPlanes()[2].getBuffer(),
-                                    proxy.getWidth(), proxy.getHeight(), inputOrientation,
-                                    false, outputOrientation);
+                                    imageInfo);
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);

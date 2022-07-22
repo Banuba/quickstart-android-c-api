@@ -21,6 +21,103 @@
 
 namespace
 {
+    struct image_info {
+        int width;
+        int height;
+        int row_stride0;
+        int row_stride1;
+        int row_stride2;
+        int pixel_stride0;
+        int pixel_stride1;
+        int pixel_stride2;
+        int input_orientation;
+        int output_orientation;
+        int pixel_format;
+        bool require_mirroring;
+    };
+
+    int get_int_field(const char* field_name, JNIEnv* env, jobject object, jclass object_class)
+    {
+        jfieldID field_id = env->GetFieldID(object_class, field_name, "I");
+        return env->GetIntField(object, field_id);
+    }
+
+    bool get_bool_field(const char* field_name, JNIEnv* env, jobject object, jclass object_class)
+    {
+        jfieldID field_id = env->GetFieldID(object_class, field_name, "Z");
+        return env->GetBooleanField(object, field_id);
+    }
+
+    image_info get_image_info(JNIEnv* env, jobject image_info)
+    {
+        jclass cls = env->GetObjectClass(image_info);
+        return {
+                get_int_field("width", env, image_info, cls),
+                get_int_field("height", env, image_info, cls),
+                get_int_field("rowStride0", env, image_info, cls),
+                get_int_field("rowStride1", env, image_info, cls),
+                get_int_field("rowStride2", env, image_info, cls),
+                get_int_field("pixelStride0", env, image_info, cls),
+                get_int_field("pixelStride1", env, image_info, cls),
+                get_int_field("pixelStride2", env, image_info, cls),
+                get_int_field("inputOrientation", env, image_info, cls),
+                get_int_field("outputOrientation", env, image_info, cls),
+                get_int_field("pixelFormat", env, image_info, cls),
+                get_bool_field("requireMirroring", env, image_info, cls)
+        };
+    }
+
+    bnb::oep::interfaces::image_format get_format(const image_info& image_info,
+                                                  uint8_t* input_image_data0,
+                                                  uint8_t* input_image_data1,
+                                                  uint8_t* input_image_data2)
+    {
+        static const int YUV_420_888 = 35;
+        if(image_info.pixel_format == YUV_420_888) {
+            return bnb::oep::interfaces::image_format::nv12_bt601_full;
+        }
+        return bnb::oep::interfaces::image_format::nv12_bt601_full;
+    }
+
+    std::vector<bnb::oep::interfaces::pixel_buffer::plane_data> create_planes_from_format(
+            uint8_t* input_image_data0,
+            uint8_t* input_image_data1,
+            uint8_t* input_image_data2,
+            bnb::oep::interfaces::image_format format,
+            const image_info& image_info)
+    {
+        using ns_pb = bnb::oep::interfaces::pixel_buffer;
+        if(format == bnb::oep::interfaces::image_format::nv12_bt601_full) {
+            int y_size = image_info.row_stride0  * image_info.height;
+            int uv_size = image_info.row_stride1 * image_info.height / 2;
+
+            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
+            std::memcpy(y_plane_data.get(), input_image_data0, y_size);
+
+            ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
+            std::memcpy(uv_plane_data.get(), input_image_data1, uv_size);
+
+            ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), image_info.row_stride0};
+            ns_pb::plane_data uv_plane{std::move(uv_plane_data), static_cast<size_t>(uv_size), image_info.row_stride1};
+            std::vector<ns_pb::plane_data> planes{std::move(y_plane), std::move(uv_plane)};
+            return planes;
+        }
+        // TODO Add other formats
+        return {};
+    }
+
+    pixel_buffer_sptr create_pixel_buffer(JNIEnv* env, jobject jimageY, jobject jimageU, jobject jimageV,const image_info& image_info)
+    {
+        uint8_t* input_image_data0 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageY));
+        uint8_t* input_image_data1 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageU));
+        uint8_t* input_image_data2 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageV));
+        auto format = get_format(image_info, input_image_data0, input_image_data1, input_image_data2);
+        auto width = static_cast<int32_t>(image_info.width);
+        auto height = static_cast<int32_t>(image_info.height);
+        auto planes = create_planes_from_format(input_image_data0, input_image_data1, input_image_data2, format, image_info);
+        return bnb::oep::interfaces::pixel_buffer::create(planes, format, width, height, [](auto* pb) { delete pb; });
+    }
+
     struct banuba_sdk_manager
     {
         offscreen_effect_player_sptr oep{nullptr};
@@ -130,38 +227,15 @@ extern "C"
     JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
             JNIEnv* env, jobject thiz, jlong jsdk,
             jobject jimageY, jobject jimageU, jobject jimageV,
-            jint jwidth, jint jheight, jint input_rotation,
-            jboolean require_mirroring, jint output_orientation)
+            jobject jimage_info)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
             return;
         }
-        auto width = static_cast<int32_t>(jwidth);
-        auto height = static_cast<int32_t>(jheight);
 
-        uint8_t* input_image_dataY = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageY));
-        uint8_t* input_image_dataUV = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageU));
-        int y_size = width * height;
-        int uv_size = width * height / 2;
-
-//        uint8_t* y_plane_data_ptr = input_image_dataY;
-//        uint8_t* uv_plane_data_ptr = input_image_dataUV;
-
-        /* Create an image */
-        using ns_pb = bnb::oep::interfaces::pixel_buffer;
-        ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
-        std::memcpy(y_plane_data.get(), input_image_dataY, y_size);
-
-        ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
-        std::memcpy(uv_plane_data.get(), input_image_dataUV, uv_size);
-
-        ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), width};
-        ns_pb::plane_data uv_plane{std::move(uv_plane_data), static_cast<size_t>(uv_size), width};
-
-        std::vector<ns_pb::plane_data> planes{std::move(y_plane), std::move(uv_plane)};
-        auto format = bnb::oep::interfaces::image_format::nv12_bt601_full;
-        auto pb_image = ns_pb::create(planes, format, width, height, [](auto* pb) { delete pb; });
+        auto image_info = get_image_info(env, jimage_info);
+        auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info);
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
@@ -214,9 +288,9 @@ extern "C"
                 result->get_image(bnb::oep::interfaces::image_format::bpc8_rgba, get_image_callback);
             }
         };
-        auto in_rotation = java_rotation_to_oep_rotation(input_rotation);
-        auto out_rotation = java_rotation_to_oep_rotation(output_orientation);
-        oep->process_image_async(pb_image, in_rotation, require_mirroring, get_pixel_buffer_callback, out_rotation);
+        auto in_rotation = java_rotation_to_oep_rotation(image_info.input_orientation);
+        auto out_rotation = java_rotation_to_oep_rotation(image_info.output_orientation);
+        oep->process_image_async(pb_image, in_rotation, image_info.require_mirroring, get_pixel_buffer_callback, out_rotation);
     }
 
     /* OffscreenEffectPlayer::externalSurfaceChanged - java interface */

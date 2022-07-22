@@ -111,7 +111,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             e.printStackTrace();
         }
         mIsCreated = true;
-        mBuffer = ByteBuffer.wrap(mImageData);
+
     }
 
     /* destructor */
@@ -175,6 +175,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         /* update texture */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        mBuffer = ByteBuffer.wrap(mImageData);
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, imageWidth, imageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mBuffer);
 
         /* set uniforms */
