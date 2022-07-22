@@ -170,18 +170,6 @@ public class MainActivity extends AppCompatActivity  {
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private ByteBuffer imageToByteBuffer(Image image) {
-        ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
-        ByteBuffer uvBuffer = image.getPlanes()[1].getBuffer();
-        int ySize = yBuffer.remaining();
-        int uvSize = uvBuffer.remaining();
-        ByteBuffer output = ByteBuffer.allocateDirect(ySize + uvSize);
-
-        output.put(yBuffer);
-        output.put(uvBuffer);
-        return output;
-    }
-
     /* Returns one of: Surface.ROTATION_0; Surface.ROTATION_90; Surface.ROTATION_180; Surface.ROTATION_270 */
     public int getRotation(Context context) {
         final int rotation = ((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();

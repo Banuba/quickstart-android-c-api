@@ -103,6 +103,7 @@ namespace
             return planes;
         }
         // TODO Add other formats
+        assert(format == bnb::oep::interfaces::image_format::nv12_bt601_full);
         return {};
     }
 
@@ -122,7 +123,7 @@ namespace
     {
         offscreen_effect_player_sptr oep{nullptr};
 
-        banuba_sdk_manager(int width, int height)
+        banuba_sdk_manager()
         {
             /* Create instance of render_context */
             auto rc = bnb::oep::interfaces::render_context::create();
@@ -131,9 +132,8 @@ namespace
              * pass render_context */
             auto ort = bnb::oep::interfaces::offscreen_render_target::create(rc);
 
-            /* Create an instance of effect_player implementation with cpp api, pass path to location of
-             * effects and client token */
-            auto ep = bnb::oep::interfaces::effect_player::create(width, height);
+            /* Create an instance of effect_player implementation with c api */
+            auto ep = bnb::oep::interfaces::effect_player::create(1, 1);
 
             /* Create instance of offscreen_effect_player, pass effect_player, offscreen_render_target
              * and dimension of processing frame (for best performance it is better to coincide
@@ -208,7 +208,7 @@ extern "C"
     {
         int32_t width = jwidth;
         int32_t height = jheight;
-        auto oep = new banuba_sdk_manager(width, height);
+        auto oep = new banuba_sdk_manager();
         return reinterpret_cast<jlong>(oep);
     }
 
