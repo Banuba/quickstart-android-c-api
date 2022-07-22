@@ -249,4 +249,8 @@ namespace bnb::oep
         }
     }
 
+    void effect_player::stop() {
+        bnb_effect_player_playback_stop(m_ep, nullptr);
+    }
+
 } /* namespace bnb::oep */

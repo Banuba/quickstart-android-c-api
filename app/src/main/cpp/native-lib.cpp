@@ -86,26 +86,38 @@ extern "C"
     }
 
     /* OffscreenEffectPlayer::externalProcessImageAsync - kotlin interface */
-    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(JNIEnv* env, jobject thiz, jlong jsdk, jobject jimage, jint jwidth, jint jheight)
+    JNIEXPORT void JNICALL Java_com_banuba_sdk_example_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
+            JNIEnv* env, jobject thiz, jlong jsdk,
+            jobject jimage, jint jwidth, jint jheight)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
             return;
         }
-
-        print_message("push frame");
-
-        auto* input_image_data = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimage));
         auto width = static_cast<int32_t>(jwidth);
         auto height = static_cast<int32_t>(jheight);
 
+        auto* input_image_data = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimage));
+        int y_size = width * height;
+        int uv_size = width * height / 4;
+
+        auto * y_input_image_data = input_image_data;
+        auto * u_input_image_data = input_image_data + y_size;
+        auto * v_input_image_data = u_input_image_data + uv_size;
+
         /* Create an image */
         using ns_pb = bnb::oep::interfaces::pixel_buffer;
-        int32_t stride = width * 4;
-        ns_pb::plane_sptr rgba_plane_data(input_image_data, [](uint8_t*) { /* DO NOTHING */ });
-        ns_pb::plane_data rgba_plane{rgba_plane_data, static_cast<size_t>(stride * height), stride};
-        std::vector<ns_pb::plane_data> planes{rgba_plane};
-        auto pb_image = ns_pb::create(planes, bnb::oep::interfaces::image_format::bpc8_rgba, width, height, [](auto* pb) {});
+        ns_pb::plane_sptr y_plane_data(y_input_image_data, [](uint8_t*) { /* DO NOTHING */ });
+        ns_pb::plane_sptr u_plane_data(u_input_image_data, [](uint8_t*) { /* DO NOTHING */ });
+        ns_pb::plane_sptr v_plane_data(v_input_image_data, [](uint8_t*) { /* DO NOTHING */ });
+
+        ns_pb::plane_data y_plane{y_plane_data, static_cast<size_t>(y_size), width};
+        ns_pb::plane_data u_plane{u_plane_data, static_cast<size_t>(uv_size), width / 2};
+        ns_pb::plane_data v_plane{v_plane_data, static_cast<size_t>(uv_size), width / 2};
+
+        std::vector<ns_pb::plane_data> planes{y_plane, u_plane, v_plane};
+        auto format = bnb::oep::interfaces::image_format::i420_bt709_full;
+        auto pb_image = ns_pb::create(planes, format, width, height, [](auto* pb) {});
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
@@ -154,7 +166,9 @@ extern "C"
                 result->get_image(bnb::oep::interfaces::image_format::bpc8_rgba, get_image_callback);
             }
         };
-        oep->process_image_async(pb_image, bnb::oep::interfaces::rotation::deg0, get_pixel_buffer_callback, bnb::oep::interfaces::rotation::deg180);
+        auto in_rotation = bnb::oep::interfaces::rotation::deg0;
+        auto out_rotation = bnb::oep::interfaces::rotation::deg90;
+        oep->process_image_async(pb_image, in_rotation, get_pixel_buffer_callback, out_rotation);
     }
 
     /* OffscreenEffectPlayer::externalSurfaceChanged - kotlin interface */
