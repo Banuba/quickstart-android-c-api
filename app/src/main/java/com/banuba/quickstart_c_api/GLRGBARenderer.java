@@ -10,7 +10,7 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class GLRenderer implements GLSurfaceView.Renderer {
+public class GLRGBARenderer implements GLSurfaceView.Renderer {
     private static final String VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
             "precision mediump float;\n" +
@@ -130,8 +130,8 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         destroy();
     }
 
-    /* push mage to draw */
-    public void drawRGBAImage(byte[] imageData, int width, int height) {
+    /* push image to draw */
+    public void drawImage(byte[] imageData, int width, int height) {
         mImageData = imageData;
         mImageWidth = width;
         mImageHeight = height;
