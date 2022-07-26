@@ -18,21 +18,39 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.banuba.quickstart_c_api.rendering.GLNV12Renderer;
+import com.banuba.quickstart_c_api.rendering.GLRGBARenderer;
+import com.banuba.quickstart_c_api.rendering.GLRenderer;
+
 import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity  {
+
+public class MainActivity extends AppCompatActivity {
     private static int CAMERA_PERMISSION_REQUEST = 12345;
 
-    private Size requestSize =  new Size(1280, 720);
+    private Size requestSize = new Size(1280, 720);
     private Size size = null;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture = null;
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
-    private GLNVRenderer renderer = null;
+    private GLRenderer renderer = null;
     private ImageInfo imageInfo = null;
+
+    void createOEP() {
+        oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
+        oep.loadEffect(<#Place the effect name here, e.g. effects/test_BG#>);
+        oep.setDataReadyCallback(
+                (image0, image1, image2, width, height) -> {
+                    List<byte[]> planes = Arrays.asList(image0, image1, image2);
+                    renderer.drawImage(planes, width, height);
+                    glView.requestRender();
+                });
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -60,7 +78,7 @@ public class MainActivity extends AppCompatActivity  {
         ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
 
         /* initialize OpenGL renderer */
-        renderer = new GLNVRenderer();
+        renderer = new GLNV12Renderer();
         glView = findViewById(R.id.glSurfaceView);
         glView.setEGLContextClientVersion(3);
         glView.setRenderer(renderer);
@@ -69,12 +87,8 @@ public class MainActivity extends AppCompatActivity  {
         /* initialize Banuba SDK */
         OffscreenEffectPlayer.init(pathToResources, BanubaClientToken.KEY);
         /* Create offscreen effect player */
-        oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
-        oep.loadEffect(<#Place the effect name here, e.g. effects/test_BG#>);
-        oep.setDataReadyCallback((image0, image1, width, height) -> {
-            renderer.drawImage(image0, image1, width, height);
-            glView.requestRender();
-        });
+        createOEP();
+
         imageInfo = new ImageInfo();
         requestCameraPermissionAndStart();
     }
@@ -166,7 +180,7 @@ public class MainActivity extends AppCompatActivity  {
 
     /* Returns one of: Surface.ROTATION_0; Surface.ROTATION_90; Surface.ROTATION_180; Surface.ROTATION_270 */
     public int getRotation(Context context) {
-        final int rotation = ((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
+        final int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         return rotation;
     }
 }

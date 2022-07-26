@@ -1,4 +1,4 @@
-package com.banuba.quickstart_c_api;
+package com.banuba.quickstart_c_api.rendering;
 
 import android.opengl.GLES20;
 import android.opengl.GLES30;
@@ -13,7 +13,7 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class GLNVRenderer implements GLSurfaceView.Renderer {
+public class GLNV12Renderer extends GLRenderer {
     private static final String VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
                     "precision mediump float;\n" +
@@ -50,23 +50,11 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
                         "FragColor = vec4(r, g, b, 1.0); \n" +
                     "} \n";
 
-    /* input RGBA image to draw */
-    private byte[] mImageData0 = null;
-    private byte[] mImageData1 = null;
-    private int mImageWidth = 0;
-    private int mImageHeight = 0;
-
     /* variables for working with OpenGL */
-    private boolean mIsCreated = false;
-    private GLShaderProgram mShaderProgram = null;
-    private int mViewportWidth;
-    private int mViewportHeight;
+
     private int mUniformTexture0;
     private int mUniformTexture1;
     private int mUniformMatrix;
-    private int[] mVBO;
-    private int[] mVAO;
-    private final int[] mTextures = new int[3];
     private final float[] mMat4 = {
             0, 0.0f, 0.0f, 0.0f,
             0.0f, 0, 0.0f, 0.0f,
@@ -84,8 +72,6 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
             1f,  1f, 0.0f, /* 3 top right */
     };
     public static final int FLOAT_SIZE = 4;
-    public static final int COORDS_PER_VERTEX = 3;
-    public static final int COORDS_UV_PER_TEXTURE = 2;
 
     private static final float[] RECTANGLE_TEXTURE_UV = {
             0.0f, 0.0f, /* 0 bottom left */
@@ -101,28 +87,8 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
             1.0f, 0.0f  /* 3 top right */
     };
 
-    private static FloatBuffer createFloatBuffer(@NonNull float[] coords) {
-        final ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * FLOAT_SIZE);
-        bb.order(ByteOrder.nativeOrder());
-        final FloatBuffer fb = bb.asFloatBuffer();
-        fb.put(coords);
-        fb.rewind();
-        return fb;
-    }
-
-    public static void loadBufferData(int bufferId, @NonNull float[] array) {
-        final FloatBuffer floatBuffer = createFloatBuffer(array);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, bufferId);
-        GLES20.glBufferData(
-                GLES20.GL_ARRAY_BUFFER,
-                array.length * FLOAT_SIZE,
-                floatBuffer,
-                GLES20.GL_STATIC_DRAW
-        );
-    }
-
-    /* initialize of OpenGL drawing */
-    private void create() {
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         if (mIsCreated) {
             return;
         }
@@ -163,6 +129,7 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES30.glBindVertexArray(0);
 
+        mTextures = new int[3];
         makeTextures(mTextures);
 
         try {
@@ -174,9 +141,27 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
             e.printStackTrace();
         }
         mIsCreated = true;
-
     }
 
+    private static FloatBuffer createFloatBuffer(@NonNull float[] coords) {
+        final ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * FLOAT_SIZE);
+        bb.order(ByteOrder.nativeOrder());
+        final FloatBuffer fb = bb.asFloatBuffer();
+        fb.put(coords);
+        fb.rewind();
+        return fb;
+    }
+
+    public static void loadBufferData(int bufferId, @NonNull float[] array) {
+        final FloatBuffer floatBuffer = createFloatBuffer(array);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, bufferId);
+        GLES20.glBufferData(
+                GLES20.GL_ARRAY_BUFFER,
+                array.length * FLOAT_SIZE,
+                floatBuffer,
+                GLES20.GL_STATIC_DRAW
+        );
+    }
     public static void makeTextures(int[] textures) {
 
         GLES20.glGenTextures(textures.length, textures, 0);
@@ -198,47 +183,12 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
 
-    /* destructor */
-    private void destroy() {
-        if (mIsCreated) {
-            mIsCreated = false;
-            GLES20.glDeleteBuffers(1, mVBO, 0);
-            GLES30.glDeleteVertexArrays(1, mVAO, 0);
-            GLES20.glDeleteTextures(1, mTextures, 0);
-            mShaderProgram = null;
-        }
-    }
-
-    protected void finalize() {
-        /* Potential issue. The destructor must be called from the thread where there is a render context. */
-        destroy();
-    }
-
-    /* push image to draw */
-    public void drawImage(byte[] imageData0, byte[] imageData1, int width, int height) {
-        mImageData0 = imageData0;
-        mImageData1 = imageData1;
-        mImageWidth = width;
-        mImageHeight = height;
-    }
-
-    @Override
-    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        create();
-    }
-
-    @Override
-    public void onSurfaceChanged(GL10 gl, int width, int height) {
-        mViewportWidth = width;
-        mViewportHeight = height;
-        GLES20.glViewport(0, 0, mViewportWidth, mViewportHeight);
-    }
-
     @Override
     public void onDrawFrame(GL10 gl) {
         final int imageWidth = mImageWidth;
         final int imageHeight = mImageHeight;
-        if (!mIsCreated || mImageData0 == null || mImageData1 == null) {
+
+        if (!mIsCreated || mImageDataPlanes.isEmpty()) {
             return;
         }
 
@@ -277,8 +227,8 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
 
     private void loadProcessResultYUV2Textures() {
 
-        mBuffer0 = ByteBuffer.wrap(mImageData0);
-        mBuffer1 = ByteBuffer.wrap(mImageData1);
+        mBuffer0 = ByteBuffer.wrap(mImageDataPlanes.get(0));
+        mBuffer1 = ByteBuffer.wrap(mImageDataPlanes.get(1));
         final int imageWidth = mImageWidth;
         final int imageHeight = mImageHeight;
 

@@ -1,8 +1,7 @@
-package com.banuba.quickstart_c_api;
+package com.banuba.quickstart_c_api.rendering;
 
 import android.opengl.GLES20;
 import android.opengl.GLES30;
-import android.opengl.GLSurfaceView;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -10,7 +9,7 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class GLRGBARenderer implements GLSurfaceView.Renderer {
+public class GLRGBARenderer extends GLRenderer {
     private static final String VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
             "precision mediump float;\n" +
@@ -33,21 +32,9 @@ public class GLRGBARenderer implements GLSurfaceView.Renderer {
             "  outFragColor = vec4(texture(uTexture, vTexCoord).xyz, 1.0f);\n" +
             "}\n";
 
-    /* input RGBA image to draw */
-    private byte[] mImageData = null;
-    private int mImageWidth = 0;
-    private int mImageHeight = 0;
-
-    /* variables for working with OpenGL */
-    private boolean mIsCreated = false;
-    private GLShaderProgram mShaderProgram = null;
-    private int mViewportWidth;
-    private int mViewportHeight;
     private int mUniformTexture;
     private int mUniformMatrix;
-    private int[] mVBO;
-    private int[] mVAO;
-    private int[] mTexture;
+
     private final float[] mMat4 = {
             0, 0.0f, 0.0f, 0.0f,
             0.0f, 0, 0.0f, 0.0f,
@@ -57,8 +44,8 @@ public class GLRGBARenderer implements GLSurfaceView.Renderer {
     private ByteBuffer mBuffer = null;
     final int vertLen = 4; /* Number of vertices */
 
-    /* initialize of OpenGL drawing */
-    private void create() {
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         if (mIsCreated) {
             return;
         }
@@ -95,9 +82,9 @@ public class GLRGBARenderer implements GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES30.glBindVertexArray(0);
 
-        mTexture = new int[1];
-        GLES20.glGenTextures(1, mTexture, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
+        mTextures = new int[1];
+        GLES20.glGenTextures(1, mTextures, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
@@ -111,49 +98,13 @@ public class GLRGBARenderer implements GLSurfaceView.Renderer {
             e.printStackTrace();
         }
         mIsCreated = true;
-
-    }
-
-    /* destructor */
-    private void destroy() {
-        if (mIsCreated) {
-            mIsCreated = false;
-            GLES20.glDeleteBuffers(1, mVBO, 0);
-            GLES30.glDeleteVertexArrays(1, mVAO, 0);
-            GLES20.glDeleteTextures(1, mTexture, 0);
-            mShaderProgram = null;
-        }
-    }
-
-    protected void finalize() {
-        /* Potential issue. The destructor must be called from the thread where there is a render context. */
-        destroy();
-    }
-
-    /* push image to draw */
-    public void drawImage(byte[] imageData, int width, int height) {
-        mImageData = imageData;
-        mImageWidth = width;
-        mImageHeight = height;
-    }
-
-    @Override
-    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        create();
-    }
-
-    @Override
-    public void onSurfaceChanged(GL10 gl, int width, int height) {
-        mViewportWidth = width;
-        mViewportHeight = height;
-        GLES20.glViewport(0, 0, mViewportWidth, mViewportHeight);
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
         final int imageWidth = mImageWidth;
         final int imageHeight = mImageHeight;
-        if (!mIsCreated || mImageData == null) {
+        if (!mIsCreated || mImageDataPlanes.isEmpty()) {
             return;
         }
 
@@ -173,9 +124,9 @@ public class GLRGBARenderer implements GLSurfaceView.Renderer {
         GLES30.glBindVertexArray(mVAO[0]);
 
         /* update texture */
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        mBuffer = ByteBuffer.wrap(mImageData);
+        mBuffer = ByteBuffer.wrap(mImageDataPlanes.get(0));
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, imageWidth, imageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mBuffer);
 
         /* set uniforms */

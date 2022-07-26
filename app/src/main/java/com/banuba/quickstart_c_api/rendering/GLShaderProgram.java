@@ -1,4 +1,4 @@
-package com.banuba.quickstart_c_api;
+package com.banuba.quickstart_c_api.rendering;
 
 import android.opengl.GLES20;
 
