@@ -3,8 +3,6 @@ package com.banuba.quickstart_c_api;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.media.Image;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,12 +18,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.banuba.quickstart_c_api.R;
 import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity  {
     private static int CAMERA_PERMISSION_REQUEST = 12345;
@@ -35,7 +31,7 @@ public class MainActivity extends AppCompatActivity  {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture = null;
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
-    private GLRenderer renderer = null;
+    private GLNVRenderer renderer = null;
     private ImageInfo imageInfo = null;
 
     @Override
@@ -64,7 +60,7 @@ public class MainActivity extends AppCompatActivity  {
         ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
 
         /* initialize OpenGL renderer */
-        renderer = new GLRenderer();
+        renderer = new GLNVRenderer();
         glView = findViewById(R.id.glSurfaceView);
         glView.setEGLContextClientVersion(3);
         glView.setRenderer(renderer);
@@ -75,10 +71,8 @@ public class MainActivity extends AppCompatActivity  {
         /* Create offscreen effect player */
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
         oep.loadEffect(<#Place the effect name here, e.g. effects/test_BG#>);
-        oep.setDataReadyCallback((image, width, height) -> {
-            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-            bmp.copyPixelsFromBuffer(ByteBuffer.wrap(image));
-            renderer.drawRGBAImage(image, width, height);
+        oep.setDataReadyCallback((image0, image1, width, height) -> {
+            renderer.drawImage(image0, image1, width, height);
             glView.requestRender();
         });
         imageInfo = new ImageInfo();

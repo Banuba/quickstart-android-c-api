@@ -265,18 +265,21 @@ extern "C"
                         jvm->DetachCurrentThread();
                         return;
                     }
+                    auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
+                    auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel() / 2;
+                    void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
+                    void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
 
-                    auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
-                    void* buf = reinterpret_cast<void*>((void*) image->get_base_sptr().get());
-
-                    auto byte_array = env->NewByteArray(size);
-                    env->SetByteArrayRegion(byte_array, 0, size, reinterpret_cast<const jbyte*>(buf));
+                    auto byte_array0 = env->NewByteArray(size0);
+                    auto byte_array1 = env->NewByteArray(size1);
+                    env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
+                    env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
 
                     jclass jcallback_class = env->GetObjectClass(this_ref);
-                    jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([BII)V");
+                    jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([B[BII)V");
 
                     // call callback
-                    env->CallVoidMethod(this_ref, jcallback_method, byte_array, image->get_width(), image->get_height());
+                    env->CallVoidMethod(this_ref, jcallback_method, byte_array0, byte_array1, image->get_width(), image->get_height());
                     if (env->ExceptionCheck()) {
                         env->ExceptionDescribe();
                     }
@@ -285,7 +288,7 @@ extern "C"
                     jvm->DetachCurrentThread();
                 };
                 // Get image from effect_player and return it in the callback
-                result->get_image(bnb::oep::interfaces::image_format::bpc8_rgba, get_image_callback);
+                result->get_image(bnb::oep::interfaces::image_format::nv12_bt601_full, get_image_callback);
             }
         };
         auto in_rotation = java_rotation_to_oep_rotation(image_info.input_orientation);

@@ -86,10 +86,7 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
     public static final int FLOAT_SIZE = 4;
     public static final int COORDS_PER_VERTEX = 3;
     public static final int COORDS_UV_PER_TEXTURE = 2;
-    public static final int VERTEX_STRIDE = COORDS_PER_VERTEX * FLOAT_SIZE;
-    public static final int TEXTURE_STRIDE = COORDS_UV_PER_TEXTURE * FLOAT_SIZE;
 
-    private final int mVertexCount = RECTANGLE_VERTEX.length / COORDS_PER_VERTEX;
     private static final float[] RECTANGLE_TEXTURE_UV = {
             0.0f, 0.0f, /* 0 bottom left */
             1.0f, 0.0f, /* 1 bottom right */
@@ -269,7 +266,7 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
         mShaderProgram.setUniformMat4(mUniformMatrix, mMat4);
 
         /* draw */
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertLen); //
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertLen);
 
         /* clear */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
@@ -294,7 +291,5 @@ public class GLNVRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
                 imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
-
     }
-
 }

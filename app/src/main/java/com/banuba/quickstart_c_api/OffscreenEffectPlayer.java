@@ -79,16 +79,16 @@ class OffscreenEffectPlayer {
     }
 
     public interface DataReadyCallback {
-        void onDataReady(byte[] image, int width, int height);
+        void onDataReady(byte[] image0, byte[] image1, int width, int height);
     }
 
     public void setDataReadyCallback(DataReadyCallback callback) {
         mDataReadyCallback = callback;
     }
 
-    private void onDataReady(byte[] image, int width, int height) {
+    private void onDataReady(byte[] image0, byte[] image1, int width, int height) {
         if (mDataReadyCallback != null) {
-            mDataReadyCallback.onDataReady(image, width, height);
+            mDataReadyCallback.onDataReady(image0, image1, width, height);
         }
     }
 
