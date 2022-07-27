@@ -238,7 +238,7 @@ extern "C"
         auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info);
 
         // TODO: auto output_image_format = input_image_format; auto input_image_format = pb_image->get_image_format();
-        auto output_image_format = bnb::oep::interfaces::image_format::nv12_bt601_full;
+        auto output_image_format = bnb::oep::interfaces::image_format::i420_bt601_full;
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
@@ -291,6 +291,22 @@ extern "C"
                             byte_array2 = env->NewByteArray(0);
                             env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
                             env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
+                            break;
+                        }
+                        case bnb::oep::interfaces::image_format::i420_bt601_full: {
+                            auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
+                            auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel()/4;
+                            auto size2 = image->get_width() * image->get_height() * image->get_bytes_per_pixel()/4;
+                            void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
+                            void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
+                            void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());
+
+                            byte_array0 = env->NewByteArray(size0);
+                            byte_array1 = env->NewByteArray(size1);
+                            byte_array2 = env->NewByteArray(size2);
+                            env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
+                            env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
+                            env->SetByteArrayRegion(byte_array2, 0, size2, reinterpret_cast<const jbyte*>(buf2));
                             break;
                         }
                         default:

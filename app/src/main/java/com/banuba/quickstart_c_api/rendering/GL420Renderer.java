@@ -2,7 +2,6 @@ package com.banuba.quickstart_c_api.rendering;
 
 import android.opengl.GLES20;
 import android.opengl.GLES30;
-import android.opengl.GLSurfaceView;
 
 import androidx.annotation.NonNull;
 
@@ -13,7 +12,7 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class GLNV12Renderer extends GLRenderer {
+public class GL420Renderer extends GLRenderer {
     private static final String VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
                     "precision mediump float;\n" +
@@ -27,28 +26,34 @@ public class GLNV12Renderer extends GLRenderer {
                     "}\n";
 
     private static final String FRAGMENT_SHADER_PROGRAM =
-            "#version 300 es\n" +
+                    "#version 300 es\n" +
                     "precision mediump float;\n" +
                     "uniform sampler2D yTexture;\n" +
-                    "uniform sampler2D uvTexture;\n" +
+                    "uniform sampler2D uTexture;\n" +
+                    "uniform sampler2D vTexture;\n" +
                     "in vec2 vTexCoord;\n" +
                     "out vec4 FragColor; \n" +
                     "void main() \n" +
                     "{ \n" +
-                        "float r, g, b, y, u, v; \n" +
-                        "y = texture(yTexture, vTexCoord).r; \n" +
-                        "u = texture(uvTexture, vTexCoord).r - 0.5; \n" +
-                        "v = texture(uvTexture, vTexCoord).a - 0.5; \n" +
-                        "r = y + 1.13983*v;\n" +
-                        "g = y - 0.39465*u - 0.58060*v;\n" +
-                        "b = y + 2.03211*u;\n" +
-                        "FragColor = vec4(r, g, b, 1.0); \n" +
+                    "  float nx,ny,r,g,b,y,u,v;\n" +
+                    "  y=texture(yTexture,vTexCoord).r;\n"+
+                    "  u=texture(uTexture,vTexCoord).r;\n"+
+                    "  v=texture(vTexture,vTexCoord).r;\n"+
+
+                    "u = u-0.5;\n"+
+                    "v = v-0.5;\n"+
+                    "r = y + 1.13983*v;\n" +
+                    "g = y - 0.39465*u - 0.58060*v;\n" +
+                    "b = y + 2.03211*u;\n" +
+
+                    "  FragColor = vec4(r, g, b, 1.0); \n" +
                     "} \n";
 
     /* variables for working with OpenGL */
 
     private int mUniformTexture0;
     private int mUniformTexture1;
+    private int mUniformTexture2;
     private int mUniformMatrix;
     private final float[] mMat4 = {
             0, 0.0f, 0.0f, 0.0f,
@@ -58,6 +63,7 @@ public class GLNV12Renderer extends GLRenderer {
     };
     private ByteBuffer mBuffer0 = null;
     private ByteBuffer mBuffer1 = null;
+    private ByteBuffer mBuffer2 = null;
     final int vertLen = 4; /* Number of vertices */
 
     private static final float[] RECTANGLE_VERTEX = new float[] {
@@ -119,8 +125,10 @@ public class GLNV12Renderer extends GLRenderer {
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, drawingPlaneCoordsBufferSize, FloatBuffer.wrap(drawingPlaneCoords), GLES20.GL_STATIC_DRAW);
         GLES20.glVertexAttribPointer(0, xyzLen, GLES20.GL_FLOAT, false, vertStride, xyzOffset);
         GLES20.glVertexAttribPointer(1, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
+        GLES20.glVertexAttribPointer(2, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
         GLES20.glEnableVertexAttribArray(0);
         GLES20.glEnableVertexAttribArray(1);
+        GLES20.glEnableVertexAttribArray(2);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES30.glBindVertexArray(0);
 
@@ -130,7 +138,8 @@ public class GLNV12Renderer extends GLRenderer {
         try {
             mShaderProgram = new GLShaderProgram(VERTEX_SHADER_PROGRAM, FRAGMENT_SHADER_PROGRAM);
             mUniformTexture0 = mShaderProgram.getUniformLocation("yTexture");
-            mUniformTexture1 = mShaderProgram.getUniformLocation("uvTexture");
+            mUniformTexture1 = mShaderProgram.getUniformLocation("uTexture");
+            mUniformTexture2 = mShaderProgram.getUniformLocation("vTexture");
             mUniformMatrix = mShaderProgram.getUniformLocation("uMatrix");
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,6 +185,15 @@ public class GLNV12Renderer extends GLRenderer {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[2]);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
+
     }
 
     @Override
@@ -208,6 +226,7 @@ public class GLNV12Renderer extends GLRenderer {
         /* set uniforms */
         mShaderProgram.setUniformTexture(mUniformTexture0, 0);
         mShaderProgram.setUniformTexture(mUniformTexture1, 1);
+        mShaderProgram.setUniformTexture(mUniformTexture2, 2);
         mShaderProgram.setUniformMat4(mUniformMatrix, mMat4);
 
         /* draw */
@@ -216,6 +235,7 @@ public class GLNV12Renderer extends GLRenderer {
         /* clear */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 1);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 2);
         GLES30.glBindVertexArray(0);
         mShaderProgram.unuse();
     }
@@ -224,6 +244,8 @@ public class GLNV12Renderer extends GLRenderer {
 
         mBuffer0 = ByteBuffer.wrap(mImageDataPlanes.get(0));
         mBuffer1 = ByteBuffer.wrap(mImageDataPlanes.get(1));
+        mBuffer2 = ByteBuffer.wrap(mImageDataPlanes.get(2));
+
         final int imageWidth = mImageWidth;
         final int imageHeight = mImageHeight;
 
@@ -234,7 +256,13 @@ public class GLNV12Renderer extends GLRenderer {
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
-                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
+                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
+                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer2);
+
     }
 }
