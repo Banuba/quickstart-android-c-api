@@ -126,6 +126,7 @@ class ImageInfo {
         pixelStride1 = 0;
         pixelStride2 = 0;
         pixelFormat = 0;
+        outputImageFormat = 0;
     }
     public int width;
     public int height;
@@ -138,5 +139,6 @@ class ImageInfo {
     public int pixelStride1;
     public int pixelStride2;
     public int pixelFormat;
+    public int outputImageFormat;
     public boolean requireMirroring;
 }

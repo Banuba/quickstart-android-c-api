@@ -33,6 +33,7 @@ namespace
         int input_orientation;
         int output_orientation;
         int pixel_format;
+        int output_image_format;
         bool require_mirroring;
     };
 
@@ -63,11 +64,12 @@ namespace
                 get_int_field("inputOrientation", env, image_info, cls),
                 get_int_field("outputOrientation", env, image_info, cls),
                 get_int_field("pixelFormat", env, image_info, cls),
+                get_int_field("outputImageFormat", env, image_info, cls),
                 get_bool_field("requireMirroring", env, image_info, cls)
         };
     }
 
-    bnb::oep::interfaces::image_format get_format(const image_info& image_info,
+    bnb::oep::interfaces::image_format get_input_image_format(const image_info& image_info,
                                                   uint8_t* input_image_data0,
                                                   uint8_t* input_image_data1,
                                                   uint8_t* input_image_data2)
@@ -77,6 +79,17 @@ namespace
             return bnb::oep::interfaces::image_format::nv12_bt601_full;
         }
         return bnb::oep::interfaces::image_format::nv12_bt601_full;
+    }
+    
+    bnb::oep::interfaces::image_format get_output_image_format(int output_image_format) {
+        switch (output_image_format) {
+            case 1:
+                return bnb::oep::interfaces::image_format::nv12_bt601_full;
+            case 2:
+                return bnb::oep::interfaces::image_format::i420_bt601_full;
+            default:
+                return bnb::oep::interfaces::image_format::bpc8_rgba;
+        }
     }
 
     std::vector<bnb::oep::interfaces::pixel_buffer::plane_data> create_planes_from_format(
@@ -112,11 +125,11 @@ namespace
         uint8_t* input_image_data0 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageY));
         uint8_t* input_image_data1 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageU));
         uint8_t* input_image_data2 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageV));
-        auto format = get_format(image_info, input_image_data0, input_image_data1, input_image_data2);
+        auto input_image_format = get_input_image_format(image_info, input_image_data0, input_image_data1, input_image_data2);
         auto width = static_cast<int32_t>(image_info.width);
         auto height = static_cast<int32_t>(image_info.height);
-        auto planes = create_planes_from_format(input_image_data0, input_image_data1, input_image_data2, format, image_info);
-        return bnb::oep::interfaces::pixel_buffer::create(planes, format, width, height, [](auto* pb) { delete pb; });
+        auto planes = create_planes_from_format(input_image_data0, input_image_data1, input_image_data2, input_image_format, image_info);
+        return bnb::oep::interfaces::pixel_buffer::create(planes, input_image_format, width, height, [](auto* pb) { delete pb; });
     }
 
     struct banuba_sdk_manager
@@ -236,9 +249,7 @@ extern "C"
 
         auto image_info = get_image_info(env, jimage_info);
         auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info);
-
-        // TODO: auto output_image_format = input_image_format; auto input_image_format = pb_image->get_image_format();
-        auto output_image_format = bnb::oep::interfaces::image_format::i420_bt601_full;
+        auto output_image_format = get_output_image_format(image_info.output_image_format);
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
