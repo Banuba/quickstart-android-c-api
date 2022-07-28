@@ -35,18 +35,21 @@ public class GL420Renderer extends GLRenderer {
                     "out vec4 FragColor; \n" +
                     "void main() \n" +
                     "{ \n" +
-                    "  float nx,ny,r,g,b,y,u,v;\n" +
-                    "  y=texture(yTexture,vTexCoord).r;\n"+
-                    "  u=texture(uTexture,vTexCoord).r;\n"+
-                    "  v=texture(vTexture,vTexCoord).r;\n"+
-
-                    "u = u-0.5;\n"+
-                    "v = v-0.5;\n"+
-                    "r = y + 1.13983*v;\n" +
-                    "g = y - 0.39465*u - 0.58060*v;\n" +
-                    "b = y + 2.03211*u;\n" +
-
-                    "  FragColor = vec4(r, g, b, 1.0); \n" +
+                        "float r,g,b,y,u,v;\n" +
+                        "y=texture(yTexture,vTexCoord).r;\n"+
+                        "u=texture(uTexture,vTexCoord).r;\n"+
+                        "v=texture(vTexture,vTexCoord).r;\n"+
+                        "u = u-0.5;\n"+
+                        "v = v-0.5;\n"+
+                        "float Umax = 0.436; \n" +
+                        "float Vmax = 0.615; \n" +
+                        "float Wr = 0.299; \n" +
+                        "float Wb = 0.114; \n" +
+                        "float Wg = 1. - Wr - Wb; \n" +
+                        "r = y + v * ((1. - Wr) / Vmax);\n" +
+                        "g = y - u * ((Wb * (1. - Wb)) / (Umax * Wg)) - v * ((Wr * (1. - Wr)) / (Vmax * Wg));\n" +
+                        "b = y + u * ((1. - Wb)/Umax);\n" +
+                        "FragColor = vec4(r, g, b, 1.0); \n" +
                     "} \n";
 
     /* variables for working with OpenGL */

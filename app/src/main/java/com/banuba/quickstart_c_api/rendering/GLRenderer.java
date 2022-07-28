@@ -22,6 +22,13 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     public GLShaderProgram mShaderProgram = null;
     public int mViewportWidth;
     public int mViewportHeight;
+    public final float[] mMat4 = {
+            0, 0.0f, 0.0f, 0.0f,
+            0.0f, 0, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+    };
+    final int vertLen = 4; /* Number of vertices */
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -38,6 +45,17 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onDrawFrame(GL10 gl) {
 
+    }
+
+
+    public void scaleMatrix() {
+
+        float viewportRatio = ((float)mViewportWidth) / ((float)mViewportHeight);
+        float imageRatio = ((float)mImageWidth) / ((float)mImageHeight);
+        float xScale = imageRatio < viewportRatio ? imageRatio / viewportRatio : 1.0f;
+        float yScale = viewportRatio < imageRatio ? viewportRatio / imageRatio : 1.0f;
+        mMat4[0] = xScale;
+        mMat4[5] = yScale;
     }
 
     public void drawImage(List<byte[]> imageDataPlanes, int width, int height) {

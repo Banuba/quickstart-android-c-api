@@ -35,20 +35,42 @@ public class GLRGBARenderer extends GLRenderer {
     private int mUniformTexture;
     private int mUniformMatrix;
 
-    private final float[] mMat4 = {
-            0, 0.0f, 0.0f, 0.0f,
-            0.0f, 0, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-    };
     private ByteBuffer mBuffer = null;
-    final int vertLen = 4; /* Number of vertices */
+
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         if (mIsCreated) {
             return;
         }
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        makeVO();
+        makeVBO();
+        makeTextures();
+
+        try {
+            mShaderProgram = new GLShaderProgram(VERTEX_SHADER_PROGRAM, FRAGMENT_SHADER_PROGRAM);
+            mUniformTexture = mShaderProgram.getUniformLocation("uTexture");
+            mUniformMatrix = mShaderProgram.getUniformLocation("uMatrix");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        mIsCreated = true;
+    }
+    public  void makeVO() {
+        mVAO = new int[1];
+        GLES30.glGenVertexArrays(mVAO.length, mVAO, 0);
+        GLES30.glBindVertexArray(mVAO[0]);
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVAO[0]);
+
+        makeVBO();
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
+        GLES30.glBindVertexArray(0);
+    }
+
+    public void makeVBO() {
+        mVBO = new int[1];
         final int floatSize = Float.SIZE / 8; /* Size of Float in bytes */
         final int xyzLen = 3; /* Number of components */
         final int xyzOffset = 0; /* Size in bytes */
@@ -64,14 +86,6 @@ public class GLRGBARenderer extends GLRenderer {
                 -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, /* vertex 2 top left */
                 1.0f,   1.0f, 0.0f, 1.0f, 0.0f  /* vertex 3 top right */
         };
-
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-        mVAO = new int[1];
-        GLES30.glGenVertexArrays(mVAO.length, mVAO, 0);
-        GLES30.glBindVertexArray(mVAO[0]);
-        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVAO[0]);
-        mVBO = new int[1];
         GLES20.glGenBuffers(mVBO.length, mVBO, 0);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVBO[0]);
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, drawingPlaneCoordsBufferSize, FloatBuffer.wrap(drawingPlaneCoords), GLES20.GL_STATIC_DRAW);
@@ -79,42 +93,26 @@ public class GLRGBARenderer extends GLRenderer {
         GLES20.glVertexAttribPointer(1, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
         GLES20.glEnableVertexAttribArray(0);
         GLES20.glEnableVertexAttribArray(1);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
-        GLES30.glBindVertexArray(0);
+    }
 
+    public void makeTextures() {
         mTextures = new int[1];
-        GLES20.glGenTextures(1, mTextures, 0);
+        GLES20.glGenTextures(mTextures.length, mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-
-        try {
-            mShaderProgram = new GLShaderProgram(VERTEX_SHADER_PROGRAM, FRAGMENT_SHADER_PROGRAM);
-            mUniformTexture = mShaderProgram.getUniformLocation("uTexture");
-            mUniformMatrix = mShaderProgram.getUniformLocation("uMatrix");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        mIsCreated = true;
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        final int imageWidth = mImageWidth;
-        final int imageHeight = mImageHeight;
         if (!mIsCreated || mImageDataPlanes.isEmpty()) {
             return;
         }
 
         /* scaling matrix */
-        float viewportRatio = ((float)mViewportWidth) / ((float)mViewportHeight);
-        float imageRatio = ((float)imageWidth) / ((float)imageHeight);
-        float xScale = imageRatio < viewportRatio ? imageRatio / viewportRatio : 1.0f;
-        float yScale = viewportRatio < imageRatio ? viewportRatio / imageRatio : 1.0f;
-        mMat4[0] = xScale;
-        mMat4[5] = yScale;
+        scaleMatrix();
 
         /* clear background */
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
@@ -124,10 +122,7 @@ public class GLRGBARenderer extends GLRenderer {
         GLES30.glBindVertexArray(mVAO[0]);
 
         /* update texture */
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        mBuffer = ByteBuffer.wrap(mImageDataPlanes.get(0));
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, imageWidth, imageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mBuffer);
+        updateTextures();
 
         /* set uniforms */
         mShaderProgram.setUniformTexture(mUniformTexture, 0);
@@ -141,4 +136,12 @@ public class GLRGBARenderer extends GLRenderer {
         GLES30.glBindVertexArray(0);
         mShaderProgram.unuse();
     }
+
+    private void updateTextures() {
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        mBuffer = ByteBuffer.wrap(mImageDataPlanes.get(0));
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, mImageWidth, mImageHeight, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mBuffer);
+    }
+
 }
