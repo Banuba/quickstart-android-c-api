@@ -52,13 +52,13 @@ public class GL420Renderer extends GLRenderer {
  private static final String VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
             "precision mediump float;\n" +
-            "layout (location = 0) in vec3 aPosition;\n" +
-            "layout (location = 1) in vec2 aTextureCoord;\n" +
+            "layout (location = 0) in vec3 a_position;\n" +
+            "layout (location = 1) in vec2 a_texCoord;\n" +
             "uniform mat4 uMatrix;\n" +
             "out vec2 v_texCoord;\n" +
             "void main() {\n" +
-            "  gl_Position = vec4(aPosition, 1.0f) * uMatrix;\n" +
-            "  v_texCoord = aTextureCoord;\n" +
+            "  gl_Position = vec4(a_position, 1.0f) * uMatrix;\n" +
+            "  v_texCoord = a_texCoord;\n" +
             "}\n";
 
     private static final String FRAGMENT_SHADER_PROGRAM =
@@ -91,12 +91,6 @@ public class GL420Renderer extends GLRenderer {
     private int mUniformTexture1;
     private int mUniformTexture2;
     private int mUniformMatrix;
-    private final float[] mMat4 = {
-            0, 0.0f, 0.0f, 0.0f,
-            0.0f, 0, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-    };
     private ByteBuffer mBuffer0 = null;
     private ByteBuffer mBuffer1 = null;
     private ByteBuffer mBuffer2 = null;
@@ -108,7 +102,7 @@ public class GL420Renderer extends GLRenderer {
             -1f,  1f, 0.0f, /* 2 top left */
             1f,  1f, 0.0f, /* 3 top right */
     };
-    public static final int FLOAT_SIZE = 4;
+
 
     private static final float[] RECTANGLE_TEXTURE_UV = {
             0.0f, 0.0f, /* 0 bottom left */
@@ -169,8 +163,10 @@ public class GL420Renderer extends GLRenderer {
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, drawingPlaneCoordsBufferSize, FloatBuffer.wrap(drawingPlaneCoords), GLES20.GL_STATIC_DRAW);
         GLES20.glVertexAttribPointer(0, xyzLen, GLES20.GL_FLOAT, false, vertStride, xyzOffset);
         GLES20.glVertexAttribPointer(1, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
+        GLES20.glVertexAttribPointer(2, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
         GLES20.glEnableVertexAttribArray(0);
         GLES20.glEnableVertexAttribArray(1);
+        GLES20.glEnableVertexAttribArray(2);
     }
 
     @Override
@@ -211,41 +207,25 @@ public class GL420Renderer extends GLRenderer {
         mIsCreated = true;
     }
 
-    private static FloatBuffer createFloatBuffer(@NonNull float[] coords) {
-        final ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * FLOAT_SIZE);
-        bb.order(ByteOrder.nativeOrder());
-        final FloatBuffer fb = bb.asFloatBuffer();
-        fb.put(coords);
-        fb.rewind();
-        return fb;
-    }
-
-    public static void loadBufferData(int bufferId, @NonNull float[] array) {
-        final FloatBuffer floatBuffer = createFloatBuffer(array);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, bufferId);
-        GLES20.glBufferData(
-                GLES20.GL_ARRAY_BUFFER,
-                array.length * FLOAT_SIZE,
-                floatBuffer,
-                GLES20.GL_STATIC_DRAW
-        );
-    }
     public void makeTextures() {
         mTextures = new int[3];
         GLES20.glGenTextures(mTextures.length, mTextures, 0);
 
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
 
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
 
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
@@ -264,38 +244,22 @@ public class GL420Renderer extends GLRenderer {
         }
 
         /* scaling matrix */
-        float viewportRatio = ((float) mViewportWidth) / ((float) mViewportHeight);
-        float imageRatio = ((float) mImageWidth) / ((float) mImageHeight);
-        float xScale = imageRatio < viewportRatio ? imageRatio / viewportRatio : 1.0f;
-        float yScale = viewportRatio < imageRatio ? viewportRatio / imageRatio : 1.0f;
-        mMat4[0] = xScale;
-        mMat4[5] = yScale;
+        scaleMatrix();
 
+        /* clear background */
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
         mShaderProgram.use();
         GLES30.glBindVertexArray(mVAO[0]);
 
-        loadProcessResultYUV2Textures();
+        updateTextures();
 
-        setup();
+//        setup();
 
         /* set uniforms */
         mShaderProgram.setUniformTexture(mUniformSamplerY, 0);
         mShaderProgram.setUniformTexture(mUniformSamplerCh1, 1);
         mShaderProgram.setUniformTexture(mUniformSamplerCh2, 2);
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
-//        GLES20.glUniform1i(mUniformSamplerY, 0);
-//
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-//        GLES20.glUniform1i(mUniformSamplerCh1, 1);
-//
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
-//        GLES20.glUniform1i(mUniformSamplerCh2, 2);
-
         mShaderProgram.setUniformMat4(mUniformMatrix, mMat4);
 
         /* Conversion matrix from YUV BT601 FULL range to RGB */
@@ -304,7 +268,6 @@ public class GL420Renderer extends GLRenderer {
                 1.0f, -0.3441362862f, -0.7141362862f,  0.5312113305f, /* GREEN coeffs */
                 1.0f,  1.7720000000f,  0.0000000000f, -0.8894745098f  /* BLUE coeffs */
         };
-
         GLES20.glUniform4fv(mUniformCvtR, 1, conversionMatrix, offsetToRedColorCoeffs);
         GLES20.glUniform4fv(mUniformCvtG, 1, conversionMatrix, offsetToGreenColorCoeffs);
         GLES20.glUniform4fv(mUniformCvtB, 1, conversionMatrix, offsetToBlueColorCoeffs);
@@ -314,8 +277,6 @@ public class GL420Renderer extends GLRenderer {
 
         /* clear */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 2);
         GLES30.glBindVertexArray(0);
         mShaderProgram.unuse();
 
@@ -394,52 +355,31 @@ public class GL420Renderer extends GLRenderer {
         calculateCameraMatrixFlip(mMatrixScreen, 180, 2);
         GLES20.glUniformMatrix4fv(mUniformTextureMatrix, 1, false, mMatrixScreen, 0);
     }
-    private void loadProcessResultYUV2Textures() {
+    private void updateTextures() {
 
         mBuffer0 = ByteBuffer.wrap(mImageDataPlanes.get(0));
-        mBuffer1 = ByteBuffer.wrap(mImageDataPlanes.get(1));
-        mBuffer2 = ByteBuffer.wrap(mImageDataPlanes.get(2));
-
-        final int imageWidth = mImageWidth;
-        final int imageHeight = mImageHeight;
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
 //        GLES30.glPixelStorei(GLES30.GL_UNPACK_ROW_LENGTH, result.getBytesPerRowOfPlane(i));
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-                imageWidth, imageHeight, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
+                mImageWidth, mImageHeight, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
                 mBuffer0);
 
+        mBuffer1 = ByteBuffer.wrap(mImageDataPlanes.get(1));
+        mBuffer2 = ByteBuffer.wrap(mImageDataPlanes.get(2));
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
 //        GLES30.glPixelStorei(GLES30.GL_UNPACK_ROW_LENGTH, result.getBytesPerRowOfPlane(i));
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
+                mImageWidth/2, mImageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
                 mBuffer1);
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
 //        GLES30.glPixelStorei(GLES30.GL_UNPACK_ROW_LENGTH, result.getBytesPerRowOfPlane(i));
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
+                mImageWidth/2, mImageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
                 mBuffer2);
-
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
-//        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-//                imageWidth, imageHeight, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer0);
-//
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-//        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-//                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
-//
-//        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[2]);
-//        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-//                imageWidth/2, imageHeight/2, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer2);
-
-//        GLES30.glPixelStorei(GLES30.GL_UNPACK_ROW_LENGTH, 0);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
     }
 }

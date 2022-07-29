@@ -4,6 +4,11 @@ import android.opengl.GLES20;
 import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
 
+import androidx.annotation.NonNull;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,4 +84,27 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         /* Potential issue. The destructor must be called from the thread where there is a render context. */
         destroy();
     }
+
+    public static final int FLOAT_SIZE = 4;
+
+    private static FloatBuffer createFloatBuffer(@NonNull float[] coords) {
+        final ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * FLOAT_SIZE);
+        bb.order(ByteOrder.nativeOrder());
+        final FloatBuffer fb = bb.asFloatBuffer();
+        fb.put(coords);
+        fb.rewind();
+        return fb;
+    }
+
+    public static void loadBufferData(int bufferId, @NonNull float[] array) {
+        final FloatBuffer floatBuffer = createFloatBuffer(array);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, bufferId);
+        GLES20.glBufferData(
+                GLES20.GL_ARRAY_BUFFER,
+                array.length * FLOAT_SIZE,
+                floatBuffer,
+                GLES20.GL_STATIC_DRAW
+        );
+    }
+
 }

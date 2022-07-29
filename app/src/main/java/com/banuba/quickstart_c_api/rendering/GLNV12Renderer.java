@@ -3,10 +3,7 @@ package com.banuba.quickstart_c_api.rendering;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
 
-import androidx.annotation.NonNull;
-
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -187,7 +184,7 @@ public class GLNV12Renderer extends GLRenderer {
 
         /* clear */
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 1);
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 1);
         GLES30.glBindVertexArray(0);
         mShaderProgram.unuse();
     }
@@ -204,25 +201,5 @@ public class GLNV12Renderer extends GLRenderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
                 mImageWidth/2, mImageHeight/2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
-    }
-
-    private static FloatBuffer createFloatBuffer(@NonNull float[] coords) {
-        final ByteBuffer bb = ByteBuffer.allocateDirect(coords.length * FLOAT_SIZE);
-        bb.order(ByteOrder.nativeOrder());
-        final FloatBuffer fb = bb.asFloatBuffer();
-        fb.put(coords);
-        fb.rewind();
-        return fb;
-    }
-
-    private static void loadBufferData(int bufferId, @NonNull float[] array) {
-        final FloatBuffer floatBuffer = createFloatBuffer(array);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, bufferId);
-        GLES20.glBufferData(
-                GLES20.GL_ARRAY_BUFFER,
-                array.length * FLOAT_SIZE,
-                floatBuffer,
-                GLES20.GL_STATIC_DRAW
-        );
     }
 }

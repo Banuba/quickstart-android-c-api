@@ -18,6 +18,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.banuba.quickstart_c_api.rendering.GL420Renderer;
 import com.banuba.quickstart_c_api.rendering.GLNV12Renderer;
 import com.banuba.quickstart_c_api.rendering.GLRGBARenderer;
 import com.banuba.quickstart_c_api.rendering.GLRenderer;
@@ -40,6 +41,22 @@ public class MainActivity extends AppCompatActivity {
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
     private ImageInfo imageInfo = null;
+    // Changing mImageOutputFormat will cause the renderer's changing
+    private ImageOutputFormat mImageOutputFormat = ImageOutputFormat.i420;
+
+    void createRenderer() {
+        switch (mImageOutputFormat) {
+            case NV12:
+                renderer = new GLNV12Renderer();
+                break;
+            case RGB:
+                renderer = new GLRGBARenderer();
+                break;
+            case i420:
+                renderer = new GL420Renderer();
+                break;
+        }
+    }
 
     void createOEP() {
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
@@ -78,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
 
         /* initialize OpenGL renderer */
-        renderer = new GLNV12Renderer();
+        createRenderer();
         glView = findViewById(R.id.glSurfaceView);
         glView.setEGLContextClientVersion(3);
         glView.setRenderer(renderer);
@@ -163,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
                             imageInfo.pixelStride0 = proxy.getPlanes()[0].getPixelStride();
                             imageInfo.pixelFormat = proxy.getImage().getFormat();
                             imageInfo.requireMirroring = false;
+                            imageInfo.outputImageFormat = mImageOutputFormat.ordinal();
 
                             oep.processImageAsync(
                                     proxy.getPlanes()[0].getBuffer(),
@@ -183,4 +201,10 @@ public class MainActivity extends AppCompatActivity {
         final int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         return rotation;
     }
+}
+
+enum ImageOutputFormat {
+    RGB,
+    NV12,
+    i420
 }
