@@ -99,16 +99,7 @@ namespace bnb::oep
     /* effect_player::eval_js */
     void effect_player::eval_js(const std::string& script, oep_eval_js_result_cb result_callback)
     {
-        if (auto e_manager = bnb_effect_player_get_effect_manager(m_ep, nullptr)) {
-            if (auto effect = bnb_effect_manager_get_current_effect(e_manager, nullptr)) {
-                bnb_effect_eval_js_callback_t cb = nullptr;
-                bnb_effect_eval_js(effect, script.c_str(), cb, nullptr);
-            } else {
-                std::cout << "[Error] effect not loaded" << std::endl;
-            }
-        } else {
-            std::cout << "[Error] effect manager not initialized" << std::endl;
-        }
+        // Not implemented
     }
 
     /* effect_player::pause */
