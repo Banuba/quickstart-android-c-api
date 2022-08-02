@@ -1,272 +1,59 @@
 package com.banuba.quickstart_c_api.rendering;
 
-import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.opengl.GLES20;
-import android.opengl.GLES30;
-import android.os.Build;
-import android.util.Log;
-
-import androidx.annotation.RequiresApi;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
 
 public class GLNV12Renderer extends GLRenderer {
-    private static final String VERTEX_SHADER_PROGRAM =
+
+    public GLNV12Renderer() {
+        super(2);
+        VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
-                    "precision mediump float;\n" +
-                    "layout (location = 0) in vec3 aPosition;\n" +
-                    "layout (location = 1) in vec2 aTextureCoord;\n" +
-                    "uniform mat4 uMatrix;\n" +
-                    "out vec2 vTexCoord;\n" +
-                    "void main() {\n" +
-                    "  gl_Position = vec4(aPosition, 1.0f) * uMatrix;\n" +
-                    "  vTexCoord = aTextureCoord;\n" +
-                    "}\n";
+            "precision mediump float;\n" +
+            "layout (location = 0) in vec3 aPosition;\n" +
+            "layout (location = 1) in vec2 aTextureCoord;\n" +
+            "uniform mat4 uMatrix;\n" +
+            "out vec2 vTexCoord;\n" +
+            "void main() {\n" +
+                "gl_Position = vec4(aPosition, 1.0f) * uMatrix;\n" +
+                "vTexCoord = aTextureCoord;\n" +
+            "}\n";
 
-    private static final String FRAGMENT_SHADER_PROGRAM =
+        FRAGMENT_SHADER_PROGRAM =
             "#version 300 es\n" +
-                    "precision mediump float;\n" +
-                    "uniform sampler2D yTexture;\n" +
-                    "uniform sampler2D uvTexture;\n" +
-                    "in vec2 vTexCoord;\n" +
-                    "out vec4 FragColor; \n" +
-                    "void main() \n" +
-                    "{ \n" +
-                        "float r, g, b, y, u, v; \n" +
-                        "y = texture(yTexture, vTexCoord).r; \n" +
-                        "u = texture(uvTexture, vTexCoord).r - 0.5; \n" +
-                        "v = texture(uvTexture, vTexCoord).a - 0.5; \n" +
-                        "r = y + 1.13983*v;\n" +
-                        "g = y - 0.39465*u - 0.58060*v;\n" +
-                        "b = y + 2.03211*u;\n" +
-                        "FragColor = vec4(r, g, b, 1.0); \n" +
-                    "} \n";
+            "precision mediump float;\n" +
+            "uniform sampler2D yTexture;\n" +
+            "uniform sampler2D uvTexture;\n" +
+            "in vec2 vTexCoord;\n" +
+            "out vec4 FragColor; \n" +
+            "void main() {\n" +
+                "float y = texture(yTexture, vTexCoord).r;\n" +
+                "float u = texture(uvTexture, vTexCoord).r - 0.5;\n" +
+                "float v = texture(uvTexture, vTexCoord).a - 0.5;\n" +
+                "float r = y + 1.13983*v;\n" +
+                "float g = y - 0.39465*u - 0.58060*v;\n" +
+                "float b = y + 2.03211*u;\n" +
+                "FragColor = vec4(r, g, b, 1.0); \n" +
+            "}\n";
+    }
 
-    public static final int FLOAT_SIZE = 4;
+    public void initUniforms() throws Exception {
+        mUniformTextures = new int[mTexturesCount];
+        mUniformTextures[0] = mShaderProgram.getUniformLocation("yTexture");
+        mUniformTextures[1] = mShaderProgram.getUniformLocation("uvTexture");
+        mUniformMatrix = mShaderProgram.getUniformLocation("uMatrix");
+    }
 
-    private int mUniformTexture0;
-    private int mUniformTexture1;
-    private int mUniformMatrix;
-
-    private ByteBuffer mBuffer0 = null;
-    private ByteBuffer mBuffer1 = null;
-    private boolean mIsDebug = true;
-    @Override
-    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        if (mIsCreated) {
-            return;
+    void updateTextures() {
+        for(int i = 0; i < mTexturesCount; ++i) {
+            mBuffers[i] = ByteBuffer.wrap(mImageDataPlanes.get(i));
+            int width = (i == 0) ? mImageWidth : mImageWidth / 2;
+            int height = (i == 0) ? mImageHeight : mImageHeight / 2;
+            int format = (i == 0) ?GLES20.GL_LUMINANCE: GLES20.GL_LUMINANCE_ALPHA;
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[i]);
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + i);
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, format,
+                    width, height, 0, format, GLES20.GL_UNSIGNED_BYTE, mBuffers[i]);
         }
-
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-        makeVO();
-        makeTextures();
-
-        try {
-            mShaderProgram = new GLShaderProgram(VERTEX_SHADER_PROGRAM, FRAGMENT_SHADER_PROGRAM);
-            mUniformTexture0 = mShaderProgram.getUniformLocation("yTexture");
-            mUniformTexture1 = mShaderProgram.getUniformLocation("uvTexture");
-            mUniformMatrix = mShaderProgram.getUniformLocation("uMatrix");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        mIsCreated = true;
-    }
-
-    public void makeVO() {
-        mVAO = new int[1];
-        GLES30.glGenVertexArrays(mVAO.length, mVAO, 0);
-        GLES30.glBindVertexArray(mVAO[0]);
-        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, mVAO[0]);
-
-        makeVBO();
-
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
-        GLES30.glBindVertexArray(0);
-    }
-
-    public void makeVBO() {
-        final float[] rectangleVertex = new float[] {
-                -1f, -1f, 0.0f, /* 0 bottom left */
-                1f, -1f, 0.0f, /* 1 bottom right */
-                -1f,  1f, 0.0f, /* 2 top left */
-                1f,  1f, 0.0f, /* 3 top right */
-        };
-
-        final float[] rectangleTextureUv = {
-                0.0f, 0.0f, /* 0 bottom left */
-                1.0f, 0.0f, /* 1 bottom right */
-                0.0f, 1.0f, /* 2 top left */
-                1.0f, 1.0f  /* 3 top right */
-        };
-
-        mVBO = new int[2];
-        GLES20.glGenBuffers(mVBO.length, mVBO, 0);
-        loadBufferData(mVBO[0], rectangleVertex);
-        loadBufferData(mVBO[1], rectangleTextureUv);
-
-        final int floatSize = Float.SIZE / 8; /* Size of Float in bytes */
-        final int xyzLen = 3; /* Number of components */
-        final int xyzOffset = 0; /* Size in bytes */
-        final int uvLen = 2;  /* Number of components */
-        final int uvOffset = xyzLen * floatSize; /* Size in bytes */
-        final int coordPerVert = xyzLen + uvLen; /* Number of components */
-        final int vertStride = coordPerVert * floatSize; /* Vertex size in bytes */
-        final int drawingPlaneCoordsBufferSize = vertStride * vertLen;
-        final float[] drawingPlaneCoords = {
-                /* X      Y     Z     U     V */
-                -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, /* vertex 0 bottom left */
-                1.0f, -1.0f, 0.0f, 1.0f, 1.0f, /* vertex 1 bottom right */
-                -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, /* vertex 2 top left */
-                1.0f, 1.0f, 0.0f, 1.0f, 0.0f  /* vertex 3 top right */
-        };
-        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, drawingPlaneCoordsBufferSize, FloatBuffer.wrap(drawingPlaneCoords), GLES20.GL_STATIC_DRAW);
-        GLES20.glVertexAttribPointer(0, xyzLen, GLES20.GL_FLOAT, false, vertStride, xyzOffset);
-        GLES20.glVertexAttribPointer(1, uvLen, GLES20.GL_FLOAT, false, vertStride, uvOffset);
-        GLES20.glEnableVertexAttribArray(0);
-        GLES20.glEnableVertexAttribArray(1);
-    }
-
-    public void makeTextures() {
-        mTextures = new int[2];
-        GLES20.glGenTextures(mTextures.length, mTextures, 0);
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-    }
-
-    @Override
-    public void onDrawFrame(GL10 gl) {
-        if (!mIsCreated || mImageDataPlanes.isEmpty()) {
-            return;
-        }
-
-        /* scaling matrix */
-        scaleMatrix();
-
-        /* clear background */
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-
-        /* bind vertex array */
-        mShaderProgram.use();
-        GLES30.glBindVertexArray(mVAO[0]);
-
-        /* update texture */
-        updateTextures();
-
-        /* set uniforms */
-        mShaderProgram.setUniformTexture(mUniformTexture0, 0);
-        mShaderProgram.setUniformTexture(mUniformTexture1, 1);
-        mShaderProgram.setUniformMat4(mUniformMatrix, mMat4);
-
-        /* draw */
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertLen);
-
-        /* clear */
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 1);
-        GLES30.glBindVertexArray(0);
-        mShaderProgram.unuse();
-    }
-
-//    int i = 0;
-//    @RequiresApi(api = Build.VERSION_CODES.O)
-//    public void saveImageDetailed(ByteBuffer buffer0, ByteBuffer buffer1) {
-//        int w = mImageWidth;
-//        int h = mImageHeight;
-//        int rowStride = mImageWidth;
-//        final Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-//
-//        final IntBuffer pixels =
-//                ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder()).asIntBuffer();
-//        for (int height = 0; height < h; height++) {
-//            buffer0.position(rowStride * height);
-//            for (int x = 0; x < w; x++) {
-//                int position = (height / 2) * rowStride + x / 2;
-//                buffer1.position(position);
-//                int yy = buffer0.get()& 0xff;
-//                int uvuv = buffer1.get()& 0xff;
-//                final float y = (float) (yy/255.);
-//                final float uv = (float) ((uvuv - 128)/255.);
-//
-////                float r = (float) (y + 1.402 * v);
-////                float g = (float) (y - 0.344 * u - 0.714 * v);
-////                float b = (float) (y + 1.772 * u);
-//
-//                pixels.position(height * w + x);
-//                pixels.put(Color.argb(1, r, g, b));
-//            }
-//
-//            pixels.rewind();
-//            bitmap.copyPixelsFromBuffer(pixels);
-//        }
-//
-//        final File file = new File("/storage/emulated/0/Download/123",  i + ".png");
-//        ++i;
-//
-//        try (FileOutputStream out = new FileOutputStream(file)) {
-//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); // bmp is your Bitmap instance
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            Log.e("123", " Save E = " + e.getMessage());
-//        }
-//        bitmap.recycle();
-//    }
-
-//    public static ByteBuffer clone(ByteBuffer original) {
-//        ByteBuffer clone = ByteBuffer.allocate(original.capacity());
-//        original.rewind();//copy from the beginning
-//        clone.put(original);
-//        original.rewind();
-//        clone.flip();
-//        return clone;
-//    }
-
-    private void updateTextures() {
-        mBuffer0 = ByteBuffer.wrap(mImageDataPlanes.get(0));
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
-                mImageWidth, mImageHeight, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE, mBuffer0);
-
-        mBuffer1 = ByteBuffer.wrap(mImageDataPlanes.get(1));
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
-        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
-                mImageWidth/2, mImageHeight/2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
-
-//        if(mIsDebug) {
-//            ByteBuffer a0 = clone(mBuffer0);
-//            ByteBuffer a1 = clone(mBuffer1);
-//            if(mBuffer0 != null) {
-//                saveImageDetailed(a0, a1);
-//            } else {
-//                Log.e("NV12", "mBuffer0 == null");
-//            }
-//        }
-
     }
 }

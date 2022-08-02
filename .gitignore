@@ -2,3 +2,4 @@ local.properties
 .idea
 .gradle
 app/.cxx
+app/src/main/assets

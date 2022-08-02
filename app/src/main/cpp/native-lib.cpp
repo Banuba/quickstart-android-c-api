@@ -305,9 +305,9 @@ extern "C"
                             break;
                         }
                         case bnb::oep::interfaces::image_format::i420_bt601_full: {
-                            auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(0);
-                            auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(1)/4;
-                            auto size2 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(2)/4;
+                            auto size0 = image->get_width_of_plane(0) * image->get_height() * image->get_bytes_per_pixel_of_plane(0);
+                            auto size1 = image->get_width_of_plane(1) * image->get_height() * image->get_bytes_per_pixel_of_plane(1);
+                            auto size2 = image->get_width_of_plane(2) * image->get_height() * image->get_bytes_per_pixel_of_plane(2);
                             void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
                             void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
                             void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());
@@ -316,8 +316,19 @@ extern "C"
                             byte_array1 = env->NewByteArray(size1);
                             byte_array2 = env->NewByteArray(size2);
                             env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
-                            env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
-                            env->SetByteArrayRegion(byte_array2, 0, size2, reinterpret_cast<const jbyte*>(buf2));
+                            int u_width = image->get_width_of_plane(1);
+                            int u_stride = image->get_bytes_per_row_of_plane(1);
+
+                            for(int i = 0; i < image->get_height_of_plane(1); ++i) {
+                                env->SetByteArrayRegion(byte_array1, u_width * i, u_width, reinterpret_cast<const jbyte*>(buf1) + u_stride * i);
+                            }
+
+                            int v_width = image->get_width_of_plane(2);
+                            int v_stride = image->get_bytes_per_row_of_plane(2);
+
+                            for(int i = 0; i < image->get_height_of_plane(2); ++i) {
+                                env->SetByteArrayRegion(byte_array2, v_width * i, v_width, reinterpret_cast<const jbyte*>(buf2) + v_stride * i);
+                            }
                             break;
                         }
                         default:

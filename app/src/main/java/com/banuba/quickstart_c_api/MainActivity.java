@@ -18,20 +18,17 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.banuba.quickstart_c_api.rendering.GL420PetrRenderer;
 import com.banuba.quickstart_c_api.rendering.GL420Renderer;
-import com.banuba.quickstart_c_api.rendering.GL420RendererOld;
+
 import com.banuba.quickstart_c_api.rendering.GLNV12Renderer;
 import com.banuba.quickstart_c_api.rendering.GLRGBARenderer;
 import com.banuba.quickstart_c_api.rendering.GLRenderer;
-
 import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-
 
 public class MainActivity extends AppCompatActivity {
     private static int CAMERA_PERMISSION_REQUEST = 12345;
@@ -41,34 +38,34 @@ public class MainActivity extends AppCompatActivity {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture = null;
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
-//    private GLRenderer renderer = null;
-    private GL420PetrRenderer renderer = null;
+    private GLRenderer renderer = null;
     private ImageInfo imageInfo = null;
+
     // Changing mImageOutputFormat will cause the renderer's changing
     private ImageOutputFormat mImageOutputFormat = ImageOutputFormat.i420;
 
-//    void createRenderer() {
-//        switch (mImageOutputFormat) {
-//            case NV12:
-//                renderer = new GLNV12Renderer();
-//                break;
-//            case RGB:
-//                renderer = new GLRGBARenderer();
-//                break;
-//            case i420:
-//                renderer = new GL420Renderer();
-//                break;
-//        }
-//    }
+    void createRenderer() {
+        switch (mImageOutputFormat) {
+            case NV12:
+                renderer = new GLNV12Renderer();
+                break;
+            case RGB:
+                renderer = new GLRGBARenderer();
+                break;
+            case i420:
+                renderer = new GL420Renderer();
+                break;
+        }
+    }
 
     void createOEP() {
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
         oep.loadEffect("effects/Makeup");
-//        oep.evalJs("Eyes.color('0 1 0 0.64')");
+        oep.evalJs("Eyes.color('0 1 0 0.64')");
         oep.setDataReadyCallback(
                 (image0,image1, image2, width, height) -> {
                     List<byte[]> planes = Arrays.asList(image0, image1, image2);
-                    renderer.drawRGBAImage(planes, width, height);
+                    renderer.drawImage(planes, width, height);
                     glView.requestRender();
                 });
     }
@@ -100,8 +97,7 @@ public class MainActivity extends AppCompatActivity {
         ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
 
         /* initialize OpenGL renderer */
-//        createRenderer();
-        renderer = new GL420PetrRenderer();
+        createRenderer();
         glView = findViewById(R.id.glSurfaceView);
         glView.setEGLContextClientVersion(3);
         glView.setRenderer(renderer);
