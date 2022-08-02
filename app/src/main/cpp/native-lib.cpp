@@ -306,8 +306,8 @@ extern "C"
                         }
                         case bnb::oep::interfaces::image_format::i420_bt601_full: {
                             auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(0);
-                            auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(1);
-                            auto size2 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(2);
+                            auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(1)/4;
+                            auto size2 = image->get_width() * image->get_height() * image->get_bytes_per_pixel_of_plane(2)/4;
                             void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
                             void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
                             void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());

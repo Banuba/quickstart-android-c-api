@@ -1,10 +1,21 @@
 package com.banuba.quickstart_c_api.rendering;
 
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
+import android.os.Build;
+import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -49,7 +60,7 @@ public class GLNV12Renderer extends GLRenderer {
 
     private ByteBuffer mBuffer0 = null;
     private ByteBuffer mBuffer1 = null;
-
+    private boolean mIsDebug = true;
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         if (mIsCreated) {
@@ -99,18 +110,10 @@ public class GLNV12Renderer extends GLRenderer {
                 1.0f, 1.0f  /* 3 top right */
         };
 
-        final float[] rectangleTextureUvSwap = {
-                0.0f, 1.0f, /* 0 bottom left */
-                1.0f, 1.0f, /* 1 bottom right */
-                0.0f, 0.0f, /* 2 top left */
-                1.0f, 0.0f  /* 3 top right */
-        };
-
-        mVBO = new int[3];
+        mVBO = new int[2];
         GLES20.glGenBuffers(mVBO.length, mVBO, 0);
         loadBufferData(mVBO[0], rectangleVertex);
         loadBufferData(mVBO[1], rectangleTextureUv);
-        loadBufferData(mVBO[2], rectangleTextureUvSwap);
 
         final int floatSize = Float.SIZE / 8; /* Size of Float in bytes */
         final int xyzLen = 3; /* Number of components */
@@ -189,6 +192,59 @@ public class GLNV12Renderer extends GLRenderer {
         mShaderProgram.unuse();
     }
 
+//    int i = 0;
+//    @RequiresApi(api = Build.VERSION_CODES.O)
+//    public void saveImageDetailed(ByteBuffer buffer0, ByteBuffer buffer1) {
+//        int w = mImageWidth;
+//        int h = mImageHeight;
+//        int rowStride = mImageWidth;
+//        final Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+//
+//        final IntBuffer pixels =
+//                ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder()).asIntBuffer();
+//        for (int height = 0; height < h; height++) {
+//            buffer0.position(rowStride * height);
+//            for (int x = 0; x < w; x++) {
+//                int position = (height / 2) * rowStride + x / 2;
+//                buffer1.position(position);
+//                int yy = buffer0.get()& 0xff;
+//                int uvuv = buffer1.get()& 0xff;
+//                final float y = (float) (yy/255.);
+//                final float uv = (float) ((uvuv - 128)/255.);
+//
+////                float r = (float) (y + 1.402 * v);
+////                float g = (float) (y - 0.344 * u - 0.714 * v);
+////                float b = (float) (y + 1.772 * u);
+//
+//                pixels.position(height * w + x);
+//                pixels.put(Color.argb(1, r, g, b));
+//            }
+//
+//            pixels.rewind();
+//            bitmap.copyPixelsFromBuffer(pixels);
+//        }
+//
+//        final File file = new File("/storage/emulated/0/Download/123",  i + ".png");
+//        ++i;
+//
+//        try (FileOutputStream out = new FileOutputStream(file)) {
+//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); // bmp is your Bitmap instance
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            Log.e("123", " Save E = " + e.getMessage());
+//        }
+//        bitmap.recycle();
+//    }
+
+//    public static ByteBuffer clone(ByteBuffer original) {
+//        ByteBuffer clone = ByteBuffer.allocate(original.capacity());
+//        original.rewind();//copy from the beginning
+//        clone.put(original);
+//        original.rewind();
+//        clone.flip();
+//        return clone;
+//    }
+
     private void updateTextures() {
         mBuffer0 = ByteBuffer.wrap(mImageDataPlanes.get(0));
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
@@ -201,5 +257,16 @@ public class GLNV12Renderer extends GLRenderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[1]);
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
                 mImageWidth/2, mImageHeight/2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, mBuffer1);
+
+//        if(mIsDebug) {
+//            ByteBuffer a0 = clone(mBuffer0);
+//            ByteBuffer a1 = clone(mBuffer1);
+//            if(mBuffer0 != null) {
+//                saveImageDetailed(a0, a1);
+//            } else {
+//                Log.e("NV12", "mBuffer0 == null");
+//            }
+//        }
+
     }
 }

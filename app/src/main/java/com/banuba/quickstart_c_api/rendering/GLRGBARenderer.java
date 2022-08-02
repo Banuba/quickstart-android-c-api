@@ -46,7 +46,7 @@ public class GLRGBARenderer extends GLRenderer {
         GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         makeVO();
-        makeVBO();
+//        makeVBO();
         makeTextures();
 
         try {
@@ -58,7 +58,8 @@ public class GLRGBARenderer extends GLRenderer {
         }
         mIsCreated = true;
     }
-    public  void makeVO() {
+
+    public void makeVO() {
         mVAO = new int[1];
         GLES30.glGenVertexArrays(mVAO.length, mVAO, 0);
         GLES30.glBindVertexArray(mVAO[0]);
