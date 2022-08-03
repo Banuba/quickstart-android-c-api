@@ -136,7 +136,7 @@ namespace
     {
         offscreen_effect_player_sptr oep{nullptr};
 
-        banuba_sdk_manager()
+        banuba_sdk_manager(int width, int height)
         {
             /* Create instance of render_context */
             auto rc = bnb::oep::interfaces::render_context::create();
@@ -146,12 +146,12 @@ namespace
             auto ort = bnb::oep::interfaces::offscreen_render_target::create(rc);
 
             /* Create an instance of effect_player implementation with c api */
-            auto ep = bnb::oep::interfaces::effect_player::create(1, 1);
+            auto ep = bnb::oep::interfaces::effect_player::create(width, height);
 
             /* Create instance of offscreen_effect_player, pass effect_player, offscreen_render_target
              * and dimension of processing frame (for best performance it is better to coincide
              * with camera frame dimensions) */
-            oep = bnb::oep::interfaces::offscreen_effect_player::create(ep, ort, 1, 1);
+            oep = bnb::oep::interfaces::offscreen_effect_player::create(ep, ort, width, height);
         }
 
         ~banuba_sdk_manager() = default;
@@ -221,7 +221,7 @@ extern "C"
     {
         int32_t width = jwidth;
         int32_t height = jheight;
-        auto oep = new banuba_sdk_manager();
+        auto oep = new banuba_sdk_manager(width, height);
         return reinterpret_cast<jlong>(oep);
     }
 

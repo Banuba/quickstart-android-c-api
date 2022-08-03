@@ -14,13 +14,14 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.banuba.quickstart_c_api.rendering.GL420Renderer;
 
-import com.banuba.quickstart_c_api.rendering.GLNV12Renderer;
+import com.banuba.quickstart_c_api.rendering.GLYUVNVRenderer;
 import com.banuba.quickstart_c_api.rendering.GLRGBARenderer;
 import com.banuba.quickstart_c_api.rendering.GLRenderer;
 import com.banuba.sdk.utils.ContextProvider;
@@ -39,7 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
-    private ImageInfo imageInfo = null;
+//    private ImageInfo imageInfo = null;
+    private OffscreenEffectPlayerImage mImage = null;
 
     // Changing mImageOutputFormat will cause the renderer's changing
     private ImageOutputFormat mImageOutputFormat = ImageOutputFormat.i420;
@@ -47,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     void createRenderer() {
         switch (mImageOutputFormat) {
             case NV12:
-                renderer = new GLNV12Renderer();
+                renderer = new GLYUVNVRenderer();
                 break;
             case RGB:
                 renderer = new GLRGBARenderer();
@@ -60,8 +62,7 @@ public class MainActivity extends AppCompatActivity {
 
     void createOEP() {
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
-        oep.loadEffect("effects/Makeup");
-        oep.evalJs("Eyes.color('0 1 0 0.64')");
+        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>")
         oep.setDataReadyCallback(
                 (image0,image1, image2, width, height) -> {
                     List<byte[]> planes = Arrays.asList(image0, image1, image2);
@@ -77,21 +78,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final int rotation = getRotation(this);
-        switch (rotation) {
-            case Surface.ROTATION_0: /* portrait */
-                size = new Size(requestSize.getHeight(), requestSize.getWidth());
-                break;
-            case Surface.ROTATION_90: /* landscape */
-                size = new Size(requestSize.getWidth(), requestSize.getHeight());
-                break;
-            case Surface.ROTATION_180: /* reverse portrait */
-                size = new Size(requestSize.getHeight(), requestSize.getWidth());
-                break;
-            case Surface.ROTATION_270: /* reverse landscape */
-                size = new Size(requestSize.getWidth(), requestSize.getHeight());
-                break;
-        }
+        updateSize();
 
         String pathToResources = new File(getFilesDir().getAbsoluteFile(), "bnb-resources").getAbsolutePath();
         ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
@@ -108,8 +95,26 @@ public class MainActivity extends AppCompatActivity {
         /* Create offscreen effect player */
         createOEP();
 
-        imageInfo = new ImageInfo();
+        mImage = new OffscreenEffectPlayerImage();
         requestCameraPermissionAndStart();
+    }
+
+    private void updateSize() {
+        final int rotation = getRotation(this);
+        switch (rotation) {
+            case Surface.ROTATION_0: /* portrait */
+                size = new Size(requestSize.getHeight(), requestSize.getWidth());
+                break;
+            case Surface.ROTATION_90: /* landscape */
+                size = new Size(requestSize.getWidth(), requestSize.getHeight());
+                break;
+            case Surface.ROTATION_180: /* reverse portrait */
+                size = new Size(requestSize.getHeight(), requestSize.getWidth());
+                break;
+            case Surface.ROTATION_270: /* reverse landscape */
+                size = new Size(requestSize.getWidth(), requestSize.getHeight());
+                break;
+        }
     }
 
     @Override
@@ -150,45 +155,8 @@ public class MainActivity extends AppCompatActivity {
                 imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
-                            int rotation = getRotation(MainActivity.this);
-                            int inputOrientation = 0;
-                            int outputOrientation = 0;
-                            switch (rotation) {
-                                case Surface.ROTATION_0: /* portrait */
-                                    inputOrientation = 270;
-                                    outputOrientation = 180;
-                                    break;
-                                case Surface.ROTATION_90: /* landscape */
-                                    inputOrientation = 180;
-                                    outputOrientation = 0;
-                                    break;
-                                case Surface.ROTATION_180: /* reverse portrait */
-                                    inputOrientation = 90;
-                                    outputOrientation = 180;
-                                    break;
-                                case Surface.ROTATION_270: /* reverse landscape */
-                                    inputOrientation = 0;
-                                    outputOrientation = 0;
-                                    break;
-                            }
-
-                            imageInfo.width = proxy.getWidth();
-                            imageInfo.height = proxy.getHeight();
-                            imageInfo.inputOrientation = inputOrientation;
-                            imageInfo.outputOrientation = outputOrientation;
-                            imageInfo.rowStride0 = proxy.getPlanes()[0].getRowStride();
-                            imageInfo.rowStride1 = proxy.getPlanes()[1].getRowStride();
-                            imageInfo.rowStride2 = proxy.getPlanes()[2].getRowStride();
-                            imageInfo.pixelStride0 = proxy.getPlanes()[0].getPixelStride();
-                            imageInfo.pixelFormat = proxy.getImage().getFormat();
-                            imageInfo.requireMirroring = false;
-                            imageInfo.outputImageFormat = mImageOutputFormat.ordinal();
-
-                            oep.processImageAsync(
-                                    proxy.getPlanes()[0].getBuffer(),
-                                    proxy.getPlanes()[1].getBuffer(),
-                                    proxy.getPlanes()[2].getBuffer(),
-                                    imageInfo);
+                            updateImage(proxy);
+                            oep.processImageAsync(mImage);
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);
@@ -202,6 +170,55 @@ public class MainActivity extends AppCompatActivity {
     public int getRotation(Context context) {
         final int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         return rotation;
+    }
+
+    private int getInputOrientation(int rotation) {
+        switch (rotation) {
+            case Surface.ROTATION_0: /* portrait */
+                return 270;
+            case Surface.ROTATION_90: /* landscape */
+                return 180;
+            case Surface.ROTATION_180: /* reverse portrait */
+                return 90;
+            case Surface.ROTATION_270: /* reverse landscape */
+                return 0;
+        }
+        return 0;
+    }
+
+    private int getOutputOrientation(int rotation) {
+        if(rotation == Surface.ROTATION_0 || rotation ==  Surface.ROTATION_180) {
+            return 180;
+        }
+        return 0;
+    }
+
+    private void updateImage(ImageProxy imageProxy) {
+        int rotation = getRotation(MainActivity.this);
+
+        mImage.mImageInfo.width = imageProxy.getWidth();
+        mImage.mImageInfo.height = imageProxy.getHeight();
+        mImage.mImageInfo.inputOrientation = getInputOrientation(rotation);
+        mImage.mImageInfo.outputOrientation = getOutputOrientation(rotation);
+        mImage.mImageInfo.pixelFormat = imageProxy.getImage().getFormat();
+        mImage.mImageInfo.requireMirroring = false;
+        mImage.mImageInfo.outputImageFormat = mImageOutputFormat.ordinal();
+
+        mImage.mImageInfo.rowStride0 = imageProxy.getPlanes()[0].getRowStride();
+        mImage.mImageZero = imageProxy.getPlanes()[0].getBuffer();
+        mImage.mImageInfo.pixelStride0 = imageProxy.getPlanes()[0].getPixelStride();
+
+        int planesNumber = imageProxy.getPlanes().length;
+        if (planesNumber > 1) {
+            mImage.mImageInfo.rowStride1 = imageProxy.getPlanes()[1].getRowStride();
+            mImage.mImageFirst = imageProxy.getPlanes()[1].getBuffer();
+            mImage.mImageInfo.pixelStride1 = imageProxy.getPlanes()[1].getPixelStride();
+            if (planesNumber > 2) {
+                mImage.mImageInfo.rowStride2 = imageProxy.getPlanes()[2].getRowStride();
+                mImage.mImageSecond = imageProxy.getPlanes()[2].getBuffer();
+                mImage.mImageInfo.pixelStride2 = imageProxy.getPlanes()[2].getPixelStride();
+            }
+        }
     }
 }
 

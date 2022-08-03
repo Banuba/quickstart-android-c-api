@@ -3,9 +3,9 @@ package com.banuba.quickstart_c_api.rendering;
 import android.opengl.GLES20;
 import java.nio.ByteBuffer;
 
-public class GLNV12Renderer extends GLRenderer {
+public class GLYUVNVRenderer extends GLRenderer {
 
-    public GLNV12Renderer() {
+    public GLYUVNVRenderer() {
         super(2);
         VERTEX_SHADER_PROGRAM =
             "#version 300 es\n" +
