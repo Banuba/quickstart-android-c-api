@@ -40,14 +40,13 @@ public class MainActivity extends AppCompatActivity {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
-//    private ImageInfo imageInfo = null;
     private OffscreenEffectPlayerImage mImage = null;
 
-    // Changing mImageOutputFormat will cause the renderer's changing
-    private ImageOutputFormat mImageOutputFormat = ImageOutputFormat.i420;
+    // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
+    private ImageFormat mImageFormat = ImageFormat.NV12;
 
     void createRenderer() {
-        switch (mImageOutputFormat) {
+        switch (mImageFormat) {
             case NV12:
                 renderer = new GLYUVNVRenderer();
                 break;
@@ -202,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
         mImage.mImageInfo.outputOrientation = getOutputOrientation(rotation);
         mImage.mImageInfo.pixelFormat = imageProxy.getImage().getFormat();
         mImage.mImageInfo.requireMirroring = false;
-        mImage.mImageInfo.outputImageFormat = mImageOutputFormat.ordinal();
+        mImage.mImageInfo.imageFormat = mImageFormat.ordinal();
 
         mImage.mImageInfo.rowStride0 = imageProxy.getPlanes()[0].getRowStride();
         mImage.mImageZero = imageProxy.getPlanes()[0].getBuffer();
@@ -222,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
     }
 }
 
-enum ImageOutputFormat {
+enum ImageFormat {
     RGB,
     NV12,
     i420

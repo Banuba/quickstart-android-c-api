@@ -33,7 +33,7 @@ namespace
         int input_orientation;
         int output_orientation;
         int pixel_format;
-        int output_image_format;
+        int image_format;
         bool require_mirroring;
     };
 
@@ -64,24 +64,12 @@ namespace
                 get_int_field("inputOrientation", env, image_info, cls),
                 get_int_field("outputOrientation", env, image_info, cls),
                 get_int_field("pixelFormat", env, image_info, cls),
-                get_int_field("outputImageFormat", env, image_info, cls),
+                get_int_field("imageFormat", env, image_info, cls),
                 get_bool_field("requireMirroring", env, image_info, cls)
         };
     }
-
-    bnb::oep::interfaces::image_format get_input_image_format(const image_info& image_info,
-                                                  uint8_t* input_image_data0,
-                                                  uint8_t* input_image_data1,
-                                                  uint8_t* input_image_data2)
-    {
-        static const int YUV_420_888 = 35;
-        if(image_info.pixel_format == YUV_420_888) {
-            return bnb::oep::interfaces::image_format::nv12_bt601_full;
-        }
-        return bnb::oep::interfaces::image_format::nv12_bt601_full;
-    }
     
-    bnb::oep::interfaces::image_format get_output_image_format(int output_image_format) {
+    bnb::oep::interfaces::image_format get_image_format(int output_image_format) {
         switch (output_image_format) {
             case 1:
                 return bnb::oep::interfaces::image_format::nv12_bt601_full;
@@ -99,15 +87,19 @@ namespace
             bnb::oep::interfaces::image_format format,
             const image_info& image_info)
     {
+        // only nv12_bt601_full and i420_bt601_full are supported
+        assert(format == bnb::oep::interfaces::image_format::nv12_bt601_full
+             ||format == bnb::oep::interfaces::image_format::i420_bt601_full);
+
         using ns_pb = bnb::oep::interfaces::pixel_buffer;
         if(format == bnb::oep::interfaces::image_format::nv12_bt601_full) {
             int y_size = image_info.row_stride0  * image_info.height;
             int uv_size = image_info.row_stride1 * image_info.height / 2;
 
-            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
+            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { /* DO NOTHING */ });
             std::memcpy(y_plane_data.get(), input_image_data0, y_size);
 
-            ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
+            ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { /* DO NOTHING */ });
             std::memcpy(uv_plane_data.get(), input_image_data1, uv_size);
 
             ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), image_info.row_stride0};
@@ -115,21 +107,46 @@ namespace
             std::vector<ns_pb::plane_data> planes{std::move(y_plane), std::move(uv_plane)};
             return planes;
         }
-        // TODO Add other formats
-        assert(format == bnb::oep::interfaces::image_format::nv12_bt601_full);
+
+        if(format == bnb::oep::interfaces::image_format::i420_bt601_full) {
+            int y_size = image_info.row_stride0  * image_info.height;
+            int u_size = image_info.row_stride1 * image_info.height / 4;
+            int v_size = image_info.row_stride2 * image_info.height/ 4;
+
+            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            std::memcpy(y_plane_data.get(), input_image_data0, y_size);
+
+            ns_pb::plane_sptr u_plane_data(new ns_pb::plane_sptr::element_type[u_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            ns_pb::plane_sptr v_plane_data(new ns_pb::plane_sptr::element_type[v_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+
+            auto ptr_u = u_plane_data.get();
+            auto ptr_v = v_plane_data.get();
+
+            for (unsigned row = 0; row < image_info.height * image_info.row_stride1 / 2; row += 2) {
+                *ptr_u++ = input_image_data1[row];
+                *ptr_v++ = input_image_data1[row + 1];
+            }
+
+            ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), image_info.row_stride0};
+            ns_pb::plane_data u_plane{std::move(u_plane_data), static_cast<size_t>(u_size), image_info.row_stride1 / 2};
+            ns_pb::plane_data v_plane{std::move(v_plane_data), static_cast<size_t>(v_size), image_info.row_stride2 / 2};
+            std::vector<ns_pb::plane_data> planes{std::move(y_plane), std::move(u_plane), std::move(v_plane)};
+            return planes;
+        }
+
         return {};
     }
 
-    pixel_buffer_sptr create_pixel_buffer(JNIEnv* env, jobject jimageY, jobject jimageU, jobject jimageV,const image_info& image_info)
+    pixel_buffer_sptr create_pixel_buffer(JNIEnv* env, jobject jimageY, jobject jimageU, jobject jimageV,
+                                          const image_info& image_info, bnb::oep::interfaces::image_format image_format)
     {
         uint8_t* input_image_data0 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageY));
         uint8_t* input_image_data1 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageU));
         uint8_t* input_image_data2 = static_cast<uint8_t*>(env->GetDirectBufferAddress(jimageV));
-        auto input_image_format = get_input_image_format(image_info, input_image_data0, input_image_data1, input_image_data2);
         auto width = static_cast<int32_t>(image_info.width);
         auto height = static_cast<int32_t>(image_info.height);
-        auto planes = create_planes_from_format(input_image_data0, input_image_data1, input_image_data2, input_image_format, image_info);
-        return bnb::oep::interfaces::pixel_buffer::create(planes, input_image_format, width, height, [](auto* pb) { delete pb; });
+        auto planes = create_planes_from_format(input_image_data0, input_image_data1, input_image_data2, image_format, image_info);
+        return bnb::oep::interfaces::pixel_buffer::create(planes, image_format, width, height, [](auto* pb) { delete pb; });
     }
 
     struct banuba_sdk_manager
@@ -248,18 +265,18 @@ extern "C"
         }
 
         auto image_info = get_image_info(env, jimage_info);
-        auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info);
-        auto output_image_format = get_output_image_format(image_info.output_image_format);
+        auto image_format = get_image_format(image_info.image_format);
+        auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info, image_format);
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
         jobject this_ref = env->NewGlobalRef(thiz);
 
         // Callback for received pixel buffer from the offscreen effect player
-        auto get_pixel_buffer_callback = [this_ref, jvm, output_image_format](image_processing_result_sptr result) {
+        auto get_pixel_buffer_callback = [this_ref, jvm, image_format](image_processing_result_sptr result) {
             if (result != nullptr) {
                 // Callback for update data in render thread
-                auto get_image_callback = [this_ref, jvm, output_image_format](pixel_buffer_sptr image) {
+                auto get_image_callback = [this_ref, jvm, image_format](pixel_buffer_sptr image) {
                     JNIEnv* env = nullptr;
 
                     // double check it's all ok
@@ -284,7 +301,7 @@ extern "C"
                     jbyteArray byte_array0 = nullptr;
                     jbyteArray byte_array1 = nullptr;
                     jbyteArray byte_array2 = nullptr;
-                    switch(output_image_format) {
+                    switch(image_format) {
                         case bnb::oep::interfaces::image_format::bpc8_rgba: {
                             auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
                             byte_array0 = env->NewByteArray(size);
@@ -355,7 +372,7 @@ extern "C"
                     jvm->DetachCurrentThread();
                 };
                 // Get image from effect_player and return it in the callback
-                result->get_image(output_image_format, get_image_callback);
+                result->get_image(image_format, get_image_callback);
             }
         };
         auto in_rotation = java_rotation_to_oep_rotation(image_info.input_orientation);
