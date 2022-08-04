@@ -96,10 +96,10 @@ namespace
             int y_size = image_info.row_stride0  * image_info.height;
             int uv_size = image_info.row_stride1 * image_info.height / 2;
 
-            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr; });
             std::memcpy(y_plane_data.get(), input_image_data0, y_size);
 
-            ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            ns_pb::plane_sptr uv_plane_data(new ns_pb::plane_sptr::element_type[uv_size], [](uint8_t* ptr) { delete[] ptr; });
             std::memcpy(uv_plane_data.get(), input_image_data1, uv_size);
 
             ns_pb::plane_data y_plane{std::move(y_plane_data), static_cast<size_t>(y_size), image_info.row_stride0};
@@ -113,11 +113,11 @@ namespace
             int u_size = image_info.row_stride1 * image_info.height / 4;
             int v_size = image_info.row_stride2 * image_info.height/ 4;
 
-            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            ns_pb::plane_sptr y_plane_data(new ns_pb::plane_sptr::element_type[y_size], [](uint8_t* ptr) { delete[] ptr;});
             std::memcpy(y_plane_data.get(), input_image_data0, y_size);
 
-            ns_pb::plane_sptr u_plane_data(new ns_pb::plane_sptr::element_type[u_size], [](uint8_t* ptr) { /* DO NOTHING */ });
-            ns_pb::plane_sptr v_plane_data(new ns_pb::plane_sptr::element_type[v_size], [](uint8_t* ptr) { /* DO NOTHING */ });
+            ns_pb::plane_sptr u_plane_data(new ns_pb::plane_sptr::element_type[u_size], [](uint8_t* ptr) { delete[] ptr; });
+            ns_pb::plane_sptr v_plane_data(new ns_pb::plane_sptr::element_type[v_size], [](uint8_t* ptr) { delete[] ptr; });
 
             auto ptr_u = u_plane_data.get();
             auto ptr_v = v_plane_data.get();
