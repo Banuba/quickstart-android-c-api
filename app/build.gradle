@@ -6,7 +6,7 @@ android {
     compileSdkVersion 31
 
     defaultConfig {
-        applicationId "com.banuba.sdk.example.quickstart_c_api"
+        applicationId "com.banuba.quickstart_c_api"
         minSdkVersion 24
         targetSdkVersion 31
         versionCode 1
@@ -19,6 +19,10 @@ android {
                 cppFlags "-std=c++17"
             }
         }
+    }
+
+    buildFeatures {
+        viewBinding true
     }
 
     buildTypes {
@@ -34,6 +38,11 @@ android {
                 abiFilters 'armeabi-v7a', 'arm64-v8a'
             }
         }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     externalNativeBuild {
@@ -53,6 +62,12 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+
+    // CameraX
+    def camerax_version = "1.0.0-beta06"
+    implementation "androidx.camera:camera-camera2:$camerax_version"
+    implementation "androidx.camera:camera-lifecycle:$camerax_version"
+    implementation "androidx.camera:camera-view:1.0.0-alpha13"
 }
 
 task extractAAR(type: Copy) {

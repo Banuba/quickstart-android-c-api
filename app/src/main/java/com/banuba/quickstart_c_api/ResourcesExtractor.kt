@@ -1,4 +1,4 @@
-package com.banuba.sdk.example.quickstart_c_api
+package com.banuba.quickstart_c_api
 
 import android.util.Log
 import java.io.*
@@ -9,7 +9,7 @@ class ResourcesExtractor {
     companion object {
         private val TAG = "ResourcesExtractor"
 
-        fun prepare(assets: AssetManager, resPath: String) {
+        public fun prepare(assets: AssetManager, resPath: String) {
             prepareResources(assets, resPath);
             prepareEffects(assets, resPath);
         }
