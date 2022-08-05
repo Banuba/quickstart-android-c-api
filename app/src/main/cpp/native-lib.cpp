@@ -253,11 +253,85 @@ extern "C"
         delete sdk;
     }
 
+    void draw_image_without_processing(pixel_buffer_sptr image,
+                                       bnb::oep::interfaces::image_format image_format,
+                                       JNIEnv* env,
+                                       jobject this_ref) {
+        jbyteArray byte_array0 = nullptr;
+        jbyteArray byte_array1 = nullptr;
+        jbyteArray byte_array2 = nullptr;
+        switch(image_format) {
+            case bnb::oep::interfaces::image_format::bpc8_rgba: {
+                auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
+                byte_array0 = env->NewByteArray(size);
+                env->SetByteArrayRegion(byte_array0, 0, size, reinterpret_cast<const jbyte*>((uint8_t*) image->get_base_sptr().get()));
+                break;
+            }
+            case bnb::oep::interfaces::image_format::nv12_bt601_full: {
+                auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
+                auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel() / 2;
+                void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
+                void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
+
+                byte_array0 = env->NewByteArray(size0);
+                byte_array1 = env->NewByteArray(size1);
+                byte_array2 = env->NewByteArray(0);
+                env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
+                env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
+                break;
+            }
+            case bnb::oep::interfaces::image_format::i420_bt601_full: {
+                auto size0 = image->get_width_of_plane(0) * image->get_height() * image->get_bytes_per_pixel_of_plane(0);
+                auto size1 = image->get_width_of_plane(1) * image->get_height() * image->get_bytes_per_pixel_of_plane(1);
+                auto size2 = image->get_width_of_plane(2) * image->get_height() * image->get_bytes_per_pixel_of_plane(2);
+                void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
+                void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
+                void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());
+
+                byte_array0 = env->NewByteArray(size0);
+                byte_array1 = env->NewByteArray(size1);
+                byte_array2 = env->NewByteArray(size2);
+                env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
+                int u_width = image->get_width_of_plane(1);
+                int u_stride = image->get_bytes_per_row_of_plane(1);
+
+                for(int i = 0; i < image->get_height_of_plane(1); ++i) {
+                    env->SetByteArrayRegion(byte_array1, u_width * i, u_width, reinterpret_cast<const jbyte*>(buf1) + u_stride * i);
+                }
+
+                int v_width = image->get_width_of_plane(2);
+                int v_stride = image->get_bytes_per_row_of_plane(2);
+
+                for(int i = 0; i < image->get_height_of_plane(2); ++i) {
+                    env->SetByteArrayRegion(byte_array2, v_width * i, v_width, reinterpret_cast<const jbyte*>(buf2) + v_stride * i);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        if(byte_array0 == nullptr && byte_array1 == nullptr && byte_array2 == nullptr) {
+            print_message("GetEnv: unsupported output image format");
+            return;
+        }
+
+        jclass jcallback_class = env->GetObjectClass(this_ref);
+        jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([B[B[BII)V");
+
+        // call callback
+        env->CallVoidMethod(this_ref, jcallback_method, byte_array0, byte_array1, byte_array2, image->get_width(), image->get_height());
+        if (env->ExceptionCheck()) {
+            env->ExceptionDescribe();
+        }
+        env->DeleteGlobalRef(this_ref);
+    }
+
     /* OffscreenEffectPlayer::externalProcessImageAsync - java interface */
     JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalProcessImageAsync(
             JNIEnv* env, jobject thiz, jlong jsdk,
             jobject jimageY, jobject jimageU, jobject jimageV,
-            jobject jimage_info)
+            jobject jimage_info, jboolean jis_process_image)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -267,10 +341,16 @@ extern "C"
         auto image_info = get_image_info(env, jimage_info);
         auto image_format = get_image_format(image_info.image_format);
         auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info, image_format);
+        bool is_process_image = static_cast<int32_t>(jis_process_image);
+
+        jobject this_ref = env->NewGlobalRef(thiz);
+        if(!is_process_image) {
+            draw_image_without_processing(pb_image, image_format, env, this_ref);
+            return;
+        }
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
-        jobject this_ref = env->NewGlobalRef(thiz);
 
         // Callback for received pixel buffer from the offscreen effect player
         auto get_pixel_buffer_callback = [this_ref, jvm, image_format](image_processing_result_sptr result) {

@@ -45,6 +45,9 @@ public class MainActivity extends AppCompatActivity {
     // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
     private ImageFormat mImageFormat = ImageFormat.NV12;
 
+    // OEP doesn't work if mIsOEPEnabled = false;
+    private boolean mIsOEPEnabled = true;
+
     void createRenderer() {
         switch (mImageFormat) {
             case NV12:
@@ -155,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
                             updateImage(proxy);
-                            oep.processImageAsync(mImage);
+                            oep.processImageAsync(mImage, mIsOEPEnabled);
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);
