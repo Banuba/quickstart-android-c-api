@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageFormat mImageFormat = ImageFormat.NV12;
 
     // OEP doesn't work if mIsOEPEnabled = false;
-    private boolean mIsOEPEnabled = true;
+    private boolean mIsOEPEnabled = false;
 
     void createRenderer() {
         switch (mImageFormat) {
@@ -64,11 +64,10 @@ public class MainActivity extends AppCompatActivity {
 
     void createOEP() {
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
-        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>")
+        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>");
         oep.setDataReadyCallback(
-                (image0,image1, image2, width, height) -> {
-                    List<byte[]> planes = Arrays.asList(image0, image1, image2);
-                    renderer.drawImage(planes, width, height);
+                (image) -> {
+                    renderer.drawImage(image);
                     glView.requestRender();
                 });
     }
@@ -159,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
                         proxy -> {
                             updateImage(proxy);
                             oep.processImageAsync(mImage, mIsOEPEnabled);
+
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);

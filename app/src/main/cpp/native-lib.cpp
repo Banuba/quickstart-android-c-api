@@ -207,56 +207,10 @@ namespace
         }
         return oep;
     }
-} /* namespace */
 
-extern "C"
-{
-    static utility_manager_holder_t* utility = nullptr;
-
-    /* OffscreenEffectPlayer::externalInit - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalInit(JNIEnv* env, jclass clazz, jstring jpath_to_resources, jstring jtoken)
-    {
-        assert(utility == nullptr);
-        std::vector<std::string> path{jstring_to_string(env, jpath_to_resources)};
-        auto token = jstring_to_string(env, jtoken);
-        std::unique_ptr<const char*[]> res_paths = std::make_unique<const char*[]>(path.size() + 1);
-        std::transform(path.begin(), path.end(), res_paths.get(), [](const auto& s) { return s.c_str(); });
-        res_paths.get()[path.size()] = nullptr;
-        utility = bnb_utility_manager_init(res_paths.get(), token.c_str(), nullptr);
-    }
-
-    /* OffscreenEffectPlayer::externalDeinit - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDeinit(JNIEnv* env, jclass clazz)
-    {
-        assert(utility != nullptr);
-        bnb_utility_manager_release(utility, nullptr);
-        utility = nullptr;
-    }
-
-    /* OffscreenEffectPlayer::externalCreate - java interface */
-    JNIEXPORT jlong JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalCreate(JNIEnv* env, jobject thiz, jint jwidth, jint jheight)
-    {
-        int32_t width = jwidth;
-        int32_t height = jheight;
-        auto oep = new banuba_sdk_manager(width, height);
-        return reinterpret_cast<jlong>(oep);
-    }
-
-    /* OffscreenEffectPlayer::externalDestroy - java interface */
-    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDestroy(JNIEnv* env, jobject thiz, jlong jsdk)
-    {
-        auto sdk = reinterpret_cast<banuba_sdk_manager*>(jsdk);
-        if (sdk == nullptr) {
-            print_message("error: OffscreenEffectPlayer::externalDestroy(): sdk == nullptr\n");
-            return;
-        }
-        delete sdk;
-    }
-
-    void draw_image_without_processing(pixel_buffer_sptr image,
-                                       bnb::oep::interfaces::image_format image_format,
-                                       JNIEnv* env,
-                                       jobject this_ref) {
+    jobject get_image_from_pixel_buffer(pixel_buffer_sptr image,
+                                        bnb::oep::interfaces::image_format image_format,
+                                        JNIEnv* env, jclass image_class) {
         jbyteArray byte_array0 = nullptr;
         jbyteArray byte_array1 = nullptr;
         jbyteArray byte_array2 = nullptr;
@@ -313,18 +267,79 @@ extern "C"
 
         if(byte_array0 == nullptr && byte_array1 == nullptr && byte_array2 == nullptr) {
             print_message("GetEnv: unsupported output image format");
+            return nullptr;
+        }
+        auto image_constructor_id = env->GetMethodID(image_class, "<init>", "([B[B[BII)V");
+        return env->NewObject(
+                image_class, image_constructor_id, byte_array0, byte_array1, byte_array2,
+                image->get_width(), image->get_height());
+    }
+
+    void draw_image_from_pixel_buffer(pixel_buffer_sptr pixel_buffer,
+                                      bnb::oep::interfaces::image_format image_format,
+                                      JNIEnv* env,
+                                      jobject this_ref, jclass image_class_ref) {
+
+        jobject image = get_image_from_pixel_buffer(std::move(pixel_buffer), image_format, env, image_class_ref);
+
+        if(image == nullptr) {
+            print_message("GetEnv: unsupported output image format");
             return;
         }
 
         jclass jcallback_class = env->GetObjectClass(this_ref);
-        jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([B[B[BII)V");
+        jmethodID jcallback_method = env->GetMethodID(jcallback_class,
+                                                      "onDataReady", "(Lcom/banuba/quickstart_c_api/Image;)V");
+        env->CallVoidMethod(this_ref, jcallback_method, image);
 
-        // call callback
-        env->CallVoidMethod(this_ref, jcallback_method, byte_array0, byte_array1, byte_array2, image->get_width(), image->get_height());
         if (env->ExceptionCheck()) {
             env->ExceptionDescribe();
         }
-        env->DeleteGlobalRef(this_ref);
+    }
+} /* namespace */
+
+extern "C"
+{
+    static utility_manager_holder_t* utility = nullptr;
+
+    /* OffscreenEffectPlayer::externalInit - java interface */
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalInit(JNIEnv* env, jclass clazz, jstring jpath_to_resources, jstring jtoken)
+    {
+        assert(utility == nullptr);
+        std::vector<std::string> path{jstring_to_string(env, jpath_to_resources)};
+        auto token = jstring_to_string(env, jtoken);
+        std::unique_ptr<const char*[]> res_paths = std::make_unique<const char*[]>(path.size() + 1);
+        std::transform(path.begin(), path.end(), res_paths.get(), [](const auto& s) { return s.c_str(); });
+        res_paths.get()[path.size()] = nullptr;
+        utility = bnb_utility_manager_init(res_paths.get(), token.c_str(), nullptr);
+    }
+
+    /* OffscreenEffectPlayer::externalDeinit - java interface */
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDeinit(JNIEnv* env, jclass clazz)
+    {
+        assert(utility != nullptr);
+        bnb_utility_manager_release(utility, nullptr);
+        utility = nullptr;
+    }
+
+    /* OffscreenEffectPlayer::externalCreate - java interface */
+    JNIEXPORT jlong JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalCreate(JNIEnv* env, jobject thiz, jint jwidth, jint jheight)
+    {
+        int32_t width = jwidth;
+        int32_t height = jheight;
+        auto oep = new banuba_sdk_manager(width, height);
+        return reinterpret_cast<jlong>(oep);
+    }
+
+    /* OffscreenEffectPlayer::externalDestroy - java interface */
+    JNIEXPORT void JNICALL Java_com_banuba_quickstart_1c_1api_OffscreenEffectPlayer_externalDestroy(JNIEnv* env, jobject thiz, jlong jsdk)
+    {
+        auto sdk = reinterpret_cast<banuba_sdk_manager*>(jsdk);
+        if (sdk == nullptr) {
+            print_message("error: OffscreenEffectPlayer::externalDestroy(): sdk == nullptr\n");
+            return;
+        }
+        delete sdk;
     }
 
     /* OffscreenEffectPlayer::externalProcessImageAsync - java interface */
@@ -341,11 +356,17 @@ extern "C"
         auto image_info = get_image_info(env, jimage_info);
         auto image_format = get_image_format(image_info.image_format);
         auto pb_image = create_pixel_buffer(env, jimageY, jimageU, jimageV, image_info, image_format);
-        bool is_process_image = static_cast<int32_t>(jis_process_image);
+
+        jclass image_class = env->FindClass("com/banuba/quickstart_c_api/Image");
+        auto image_class_ref = (jclass) env->NewGlobalRef(image_class);
 
         jobject this_ref = env->NewGlobalRef(thiz);
+
+        bool is_process_image = static_cast<int32_t>(jis_process_image);
         if(!is_process_image) {
-            draw_image_without_processing(pb_image, image_format, env, this_ref);
+            draw_image_from_pixel_buffer(pb_image, image_format, env, this_ref, image_class_ref);
+            env->DeleteGlobalRef(image_class_ref);
+            env->DeleteGlobalRef(this_ref);
             return;
         }
 
@@ -353,10 +374,10 @@ extern "C"
         env->GetJavaVM(&jvm);
 
         // Callback for received pixel buffer from the offscreen effect player
-        auto get_pixel_buffer_callback = [this_ref, jvm, image_format](image_processing_result_sptr result) {
+        auto get_pixel_buffer_callback = [this_ref, jvm, image_format, image_class_ref](image_processing_result_sptr result) {
             if (result != nullptr) {
                 // Callback for update data in render thread
-                auto get_image_callback = [this_ref, jvm, image_format](pixel_buffer_sptr image) {
+                auto get_image_callback = [this_ref, jvm, image_format, image_class_ref](pixel_buffer_sptr pb_image) {
                     JNIEnv* env = nullptr;
 
                     // double check it's all ok
@@ -364,91 +385,29 @@ extern "C"
                     if (getEnvStat == JNI_EDETACHED) {
                         if (jvm->AttachCurrentThread((JNIEnv**) &env, nullptr) != JNI_OK) {
                             print_message("GetEnv: Failed to attach");
+                            env->DeleteGlobalRef(image_class_ref);
+                            env->DeleteGlobalRef(this_ref);
                             return;
                         }
                     } else if (getEnvStat == JNI_EVERSION) {
                         print_message("GetEnv: version not supported");
+                        env->DeleteGlobalRef(image_class_ref);
+                        env->DeleteGlobalRef(this_ref);
                         return;
                     }
 
-                    if (image == nullptr) {
+                    if (pb_image == nullptr) {
                         print_message("GetEnv: image is null");
+                        env->DeleteGlobalRef(image_class_ref);
                         env->DeleteGlobalRef(this_ref);
                         jvm->DetachCurrentThread();
                         return;
                     }
 
-                    jbyteArray byte_array0 = nullptr;
-                    jbyteArray byte_array1 = nullptr;
-                    jbyteArray byte_array2 = nullptr;
-                    switch(image_format) {
-                        case bnb::oep::interfaces::image_format::bpc8_rgba: {
-                            auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
-                            byte_array0 = env->NewByteArray(size);
-                            env->SetByteArrayRegion(byte_array0, 0, size, reinterpret_cast<const jbyte*>((uint8_t*) image->get_base_sptr().get()));
-                            break;
-                        }
-                        case bnb::oep::interfaces::image_format::nv12_bt601_full: {
-                            auto size0 = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
-                            auto size1 = image->get_width() * image->get_height() * image->get_bytes_per_pixel() / 2;
-                            void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
-                            void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
-
-                            byte_array0 = env->NewByteArray(size0);
-                            byte_array1 = env->NewByteArray(size1);
-                            byte_array2 = env->NewByteArray(0);
-                            env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
-                            env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
-                            break;
-                        }
-                        case bnb::oep::interfaces::image_format::i420_bt601_full: {
-                            auto size0 = image->get_width_of_plane(0) * image->get_height() * image->get_bytes_per_pixel_of_plane(0);
-                            auto size1 = image->get_width_of_plane(1) * image->get_height() * image->get_bytes_per_pixel_of_plane(1);
-                            auto size2 = image->get_width_of_plane(2) * image->get_height() * image->get_bytes_per_pixel_of_plane(2);
-                            void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
-                            void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
-                            void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());
-
-                            byte_array0 = env->NewByteArray(size0);
-                            byte_array1 = env->NewByteArray(size1);
-                            byte_array2 = env->NewByteArray(size2);
-                            env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
-                            int u_width = image->get_width_of_plane(1);
-                            int u_stride = image->get_bytes_per_row_of_plane(1);
-
-                            for(int i = 0; i < image->get_height_of_plane(1); ++i) {
-                                env->SetByteArrayRegion(byte_array1, u_width * i, u_width, reinterpret_cast<const jbyte*>(buf1) + u_stride * i);
-                            }
-
-                            int v_width = image->get_width_of_plane(2);
-                            int v_stride = image->get_bytes_per_row_of_plane(2);
-
-                            for(int i = 0; i < image->get_height_of_plane(2); ++i) {
-                                env->SetByteArrayRegion(byte_array2, v_width * i, v_width, reinterpret_cast<const jbyte*>(buf2) + v_stride * i);
-                            }
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-
-                    if(byte_array0 == nullptr && byte_array1 == nullptr && byte_array2 == nullptr) {
-                        print_message("GetEnv: unsupported output image format");
-                        env->DeleteGlobalRef(this_ref);
-                        jvm->DetachCurrentThread();
-                        return;
-                    }
-
-                    jclass jcallback_class = env->GetObjectClass(this_ref);
-                    jmethodID jcallback_method = env->GetMethodID(jcallback_class, "onDataReady", "([B[B[BII)V");
-
-                    // call callback
-                    env->CallVoidMethod(this_ref, jcallback_method, byte_array0, byte_array1, byte_array2, image->get_width(), image->get_height());
-                    if (env->ExceptionCheck()) {
-                        env->ExceptionDescribe();
-                    }
+                    draw_image_from_pixel_buffer(std::move(pb_image), image_format, env, this_ref,
+                                                 image_class_ref);
+                    env->DeleteGlobalRef(image_class_ref);
                     env->DeleteGlobalRef(this_ref);
-
                     jvm->DetachCurrentThread();
                 };
                 // Get image from effect_player and return it in the callback

@@ -7,10 +7,13 @@ import android.opengl.GLSurfaceView;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import com.banuba.quickstart_c_api.Image;
 
 public class GLRenderer implements GLSurfaceView.Renderer {
 
@@ -178,10 +181,10 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         mMat4[5] = yScale;
     }
 
-    public void drawImage(List<byte[]> imageDataPlanes, int width, int height) {
-        mImageDataPlanes = imageDataPlanes;
-        mImageWidth = width;
-        mImageHeight = height;
+    public void drawImage(Image image) {
+        mImageDataPlanes = Arrays.asList(image.mImage0, image.mImage1, image.mImage2);;
+        mImageWidth = image.mWidth;
+        mImageHeight = image.mHeight;
     }
 
     /* destructor */

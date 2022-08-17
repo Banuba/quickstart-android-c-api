@@ -41,7 +41,7 @@ class OffscreenEffectPlayer {
         }
     }
 
-    /* image must be NV12 format */
+    /* image must be NV12 or i420 format */
     public void processImageAsync(OffscreenEffectPlayerImage image, boolean isProcessImage) {
         externalProcessImageAsync(mOep, image.mImageZero, image.mImageFirst, image.mImageSecond, image.mImageInfo, isProcessImage);
     }
@@ -79,16 +79,16 @@ class OffscreenEffectPlayer {
     }
 
     public interface DataReadyCallback {
-        void onDataReady(byte[] image0, byte[] image1, byte[] image2, int width, int height);
+        void onDataReady(Image image);
     }
 
     public void setDataReadyCallback(DataReadyCallback callback) {
         mDataReadyCallback = callback;
     }
 
-    private void onDataReady(byte[] image0, byte[] image1, byte[] image2, int width, int height) {
+    private void onDataReady(Image image) {
         if (mDataReadyCallback != null) {
-            mDataReadyCallback.onDataReady(image0, image1, image2, width, height);
+            mDataReadyCallback.onDataReady(image);
         }
     }
 
@@ -111,3 +111,4 @@ class OffscreenEffectPlayer {
         System.loadLibrary("native-lib");
     }
 }
+
