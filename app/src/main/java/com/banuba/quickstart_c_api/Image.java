@@ -1,19 +1,31 @@
 package com.banuba.quickstart_c_api;
 
+import java.nio.ByteBuffer;
+
 public class Image {
-    //    List<byte[]> imageDataPlanes;
+
+    Image() {}
 
     Image(byte[] image0, byte[] image1, byte[] image2, int w, int h) {
-        mImage0 = image0;
-        mImage1 = image1;
-        mImage2 = image2;
+        mImageZero =  ByteBuffer.wrap(image0);
+        mImageFirst =  ByteBuffer.wrap(image1);
+        mImageSecond =  ByteBuffer.wrap(image2);
+
         mWidth = w;
         mHeight = h;
-
     }
-    public byte[] mImage0;
-    public byte[] mImage1;
-    public byte[] mImage2;
+
+    public ByteBuffer mImageZero;
+    public ByteBuffer mImageFirst;
+    public ByteBuffer mImageSecond;
+
     public int mWidth;
     public int mHeight;
+    public int rowStrideZero;
+    public int rowStrideFirst;
+    public int rowStrideSecond;
+    public int pixelStrideZero;
+    public int pixelStrideFirst;
+    public int pixelStrideSecond;
+    public int pixelFormat;
 }

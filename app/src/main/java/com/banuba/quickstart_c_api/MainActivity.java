@@ -28,8 +28,6 @@ import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static int CAMERA_PERMISSION_REQUEST = 12345;
@@ -40,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
-    private OffscreenEffectPlayerImage mImage = null;
+    private Image mImage = null;
 
     // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
     private ImageFormat mImageFormat = ImageFormat.NV12;
@@ -96,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         /* Create offscreen effect player */
         createOEP();
 
-        mImage = new OffscreenEffectPlayerImage();
+        mImage = new Image();
         requestCameraPermissionAndStart();
     }
 
@@ -157,7 +155,12 @@ public class MainActivity extends AppCompatActivity {
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
                             updateImage(proxy);
-                            oep.processImageAsync(mImage, mIsOEPEnabled);
+
+                            int rotation = getRotation(MainActivity.this);
+                            int imageFormat = mImageFormat.ordinal();
+
+                            oep.processImageAsync(mImage, getInputOrientation(rotation),
+                                    false, getOutputOrientation(rotation), imageFormat, mIsOEPEnabled);
 
                             proxy.close();
                         });
@@ -196,29 +199,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateImage(ImageProxy imageProxy) {
-        int rotation = getRotation(MainActivity.this);
 
-        mImage.mImageInfo.width = imageProxy.getWidth();
-        mImage.mImageInfo.height = imageProxy.getHeight();
-        mImage.mImageInfo.inputOrientation = getInputOrientation(rotation);
-        mImage.mImageInfo.outputOrientation = getOutputOrientation(rotation);
-        mImage.mImageInfo.pixelFormat = imageProxy.getImage().getFormat();
-        mImage.mImageInfo.requireMirroring = false;
-        mImage.mImageInfo.imageFormat = mImageFormat.ordinal();
+        mImage.mWidth = imageProxy.getWidth();
+        mImage.mHeight = imageProxy.getHeight();
 
-        mImage.mImageInfo.rowStride0 = imageProxy.getPlanes()[0].getRowStride();
+        mImage.pixelFormat = imageProxy.getImage().getFormat();
+
+        mImage.rowStrideZero = imageProxy.getPlanes()[0].getRowStride();
         mImage.mImageZero = imageProxy.getPlanes()[0].getBuffer();
-        mImage.mImageInfo.pixelStride0 = imageProxy.getPlanes()[0].getPixelStride();
+        mImage.pixelStrideZero = imageProxy.getPlanes()[0].getPixelStride();
 
         int planesNumber = imageProxy.getPlanes().length;
         if (planesNumber > 1) {
-            mImage.mImageInfo.rowStride1 = imageProxy.getPlanes()[1].getRowStride();
+            mImage.rowStrideFirst = imageProxy.getPlanes()[1].getRowStride();
             mImage.mImageFirst = imageProxy.getPlanes()[1].getBuffer();
-            mImage.mImageInfo.pixelStride1 = imageProxy.getPlanes()[1].getPixelStride();
+            mImage.pixelStrideFirst = imageProxy.getPlanes()[1].getPixelStride();
             if (planesNumber > 2) {
-                mImage.mImageInfo.rowStride2 = imageProxy.getPlanes()[2].getRowStride();
+                mImage.rowStrideSecond = imageProxy.getPlanes()[2].getRowStride();
                 mImage.mImageSecond = imageProxy.getPlanes()[2].getBuffer();
-                mImage.mImageInfo.pixelStride2 = imageProxy.getPlanes()[2].getPixelStride();
+                mImage.pixelStrideSecond = imageProxy.getPlanes()[2].getPixelStride();
             }
         }
     }

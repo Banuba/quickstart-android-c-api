@@ -42,8 +42,14 @@ class OffscreenEffectPlayer {
     }
 
     /* image must be NV12 or i420 format */
-    public void processImageAsync(OffscreenEffectPlayerImage image, boolean isProcessImage) {
-        externalProcessImageAsync(mOep, image.mImageZero, image.mImageFirst, image.mImageSecond, image.mImageInfo, isProcessImage);
+    public void processImageAsync(Image image,
+                                  int inputOrientation,
+                                  boolean isRequiredMirroring,
+                                  int outputOrientation,
+                                  int imageFormat,
+                                  boolean isProcessedImage) {
+        externalProcessImageAsync(mOep, image, inputOrientation, isRequiredMirroring,
+                outputOrientation, imageFormat, isProcessedImage);
     }
 
     public void surfaceChanged(int width, int height) {
@@ -97,7 +103,12 @@ class OffscreenEffectPlayer {
     private static native void externalDeinit();
     private native long externalCreate(int width, int height);
     private native void externalDestroy(long oep);
-    private native void externalProcessImageAsync(long oep, ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV, ImageInfo info, boolean isProcessImage);
+    private native void externalProcessImageAsync(long oep, Image image,
+                                                  int inputOrientation,
+                                                  boolean isRequiredMirroring,
+                                                  int outputOrientation,
+                                                  int imageFormat,
+                                                  boolean isProcessedImage);
     private native void externalSurfaceChanged(long oep, int width, int height);
     private native void externalLoadEffect(long oep, String effectPath);
     private native void externalUnloadEffect(long oep);
