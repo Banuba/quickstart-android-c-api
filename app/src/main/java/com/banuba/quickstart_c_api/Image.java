@@ -7,9 +7,15 @@ public class Image {
     Image() {}
 
     Image(byte[] image0, byte[] image1, byte[] image2, int w, int h) {
-        mImageZero =  ByteBuffer.wrap(image0);
-        mImageFirst =  ByteBuffer.wrap(image1);
-        mImageSecond =  ByteBuffer.wrap(image2);
+        if(image0 != null) {
+            mImageZero =  ByteBuffer.wrap(image0);
+        }
+        if(image1 != null) {
+            mImageFirst =  ByteBuffer.wrap(image1);
+        }
+        if(image2 != null) {
+            mImageSecond =  ByteBuffer.wrap(image2);
+        }
 
         mWidth = w;
         mHeight = h;

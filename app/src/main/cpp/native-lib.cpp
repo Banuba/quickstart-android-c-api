@@ -223,7 +223,6 @@ namespace
 
                 byte_array0 = env->NewByteArray(size0);
                 byte_array1 = env->NewByteArray(size1);
-                byte_array2 = env->NewByteArray(0);
                 env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
                 env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
                 break;

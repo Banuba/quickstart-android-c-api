@@ -182,8 +182,16 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     }
 
     public void drawImage(Image image) {
-        mImageDataPlanes = Arrays.asList(image.mImageZero.array(),
-                image.mImageFirst.array(), image.mImageSecond.array());
+        mImageDataPlanes.clear();
+        if(image.mImageZero != null) {
+            mImageDataPlanes.add(image.mImageZero.array());
+        }
+        if(image.mImageFirst != null) {
+            mImageDataPlanes.add(image.mImageFirst.array());
+        }
+        if(image.mImageSecond != null) {
+            mImageDataPlanes.add(image.mImageSecond.array());
+        }
         mImageWidth = image.mWidth;
         mImageHeight = image.mHeight;
     }
