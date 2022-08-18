@@ -8,7 +8,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageFormat mImageFormat = ImageFormat.NV12;
 
     // OEP doesn't work if mIsOEPEnabled = false;
-    private boolean mIsOEPEnabled = false;
+    private boolean mIsOEPEnabled = true;
 
     void createRenderer() {
         switch (mImageFormat) {
@@ -68,6 +70,14 @@ public class MainActivity extends AppCompatActivity {
                     renderer.drawImage(image);
                     glView.requestRender();
                 });
+    }
+
+    private void initSwitchOEPButton() {
+        View view = findViewById(R.id.container);
+        ImageButton switchOEPBtn = view.findViewById(R.id.btn_oep_switch);
+        switchOEPBtn.setOnClickListener(v -> {
+            mIsOEPEnabled = !mIsOEPEnabled;
+        });
     }
 
     @Override
@@ -96,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
         mImage = new Image();
         requestCameraPermissionAndStart();
+        initSwitchOEPButton();
     }
 
     private void updateSize() {
