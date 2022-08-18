@@ -41,10 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private Image mImage = null;
 
     // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
-    private ImageFormat mImageFormat = ImageFormat.NV12;
-
-    // OEP doesn't work if mIsOEPEnabled = false;
-    private boolean mIsOEPEnabled = false;
+    private ImageFormat mImageFormat = ImageFormat.i420;
 
     void createRenderer() {
         switch (mImageFormat) {
@@ -160,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
                             int imageFormat = mImageFormat.ordinal();
 
                             oep.processImageAsync(mImage, getInputOrientation(rotation),
-                                    false, getOutputOrientation(rotation), imageFormat, mIsOEPEnabled);
+                                    false, getOutputOrientation(rotation), imageFormat);
 
                             proxy.close();
                         });

@@ -46,10 +46,9 @@ class OffscreenEffectPlayer {
                                   int inputOrientation,
                                   boolean isRequiredMirroring,
                                   int outputOrientation,
-                                  int imageFormat,
-                                  boolean isProcessedImage) {
+                                  int imageFormat) {
         externalProcessImageAsync(mOep, image, inputOrientation, isRequiredMirroring,
-                outputOrientation, imageFormat, isProcessedImage);
+                outputOrientation, imageFormat);
     }
 
     public void surfaceChanged(int width, int height) {
@@ -107,8 +106,7 @@ class OffscreenEffectPlayer {
                                                   int inputOrientation,
                                                   boolean isRequiredMirroring,
                                                   int outputOrientation,
-                                                  int imageFormat,
-                                                  boolean isProcessedImage);
+                                                  int imageFormat);
     private native void externalSurfaceChanged(long oep, int width, int height);
     private native void externalLoadEffect(long oep, String effectPath);
     private native void externalUnloadEffect(long oep);

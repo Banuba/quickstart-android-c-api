@@ -342,8 +342,7 @@ extern "C"
             jint jinput_orientation,
             jboolean jis_required_mirroring,
             jint joutput_orientation,
-            jint jimage_format,
-            jboolean jis_process_image)
+            jint jimage_format)
     {
         auto oep = get_offscreen_effect_player_from_jlong(jsdk);
         if (oep == nullptr) {
@@ -357,14 +356,6 @@ extern "C"
         auto image_class_ref = (jclass) env->NewGlobalRef(image_class);
 
         jobject this_ref = env->NewGlobalRef(thiz);
-
-        bool is_process_image = static_cast<int32_t>(jis_process_image);
-        if(!is_process_image) {
-            draw_image_from_pixel_buffer(pb_image, image_format, env, this_ref, image_class_ref);
-            env->DeleteGlobalRef(image_class_ref);
-            env->DeleteGlobalRef(this_ref);
-            return;
-        }
 
         JavaVM* jvm;
         env->GetJavaVM(&jvm);
