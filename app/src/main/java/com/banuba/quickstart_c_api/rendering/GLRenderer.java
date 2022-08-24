@@ -7,13 +7,12 @@ import android.opengl.GLSurfaceView;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import com.banuba.quickstart_c_api.Image;
+import com.banuba.quickstart_c_api.OffscreenEffectPlayerImage;
 
 public class GLRenderer implements GLSurfaceView.Renderer {
 
@@ -181,19 +180,16 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         mMat4[5] = yScale;
     }
 
-    public void drawImage(Image image) {
+    public void drawImage(OffscreenEffectPlayerImage image) {
         mImageDataPlanes.clear();
-        if(image.mImageZero != null) {
-            mImageDataPlanes.add(image.mImageZero.array());
+        for(int i = 0; i < mTexturesCount; ++i) {
+            ByteBuffer plane = image.getPlane(i);
+            if(plane != null) {
+                mImageDataPlanes.add(plane.array());
+            }
         }
-        if(image.mImageFirst != null) {
-            mImageDataPlanes.add(image.mImageFirst.array());
-        }
-        if(image.mImageSecond != null) {
-            mImageDataPlanes.add(image.mImageSecond.array());
-        }
-        mImageWidth = image.mWidth;
-        mImageHeight = image.mHeight;
+        mImageWidth = image.getWidth();
+        mImageHeight = image.getHeight();
     }
 
     /* destructor */

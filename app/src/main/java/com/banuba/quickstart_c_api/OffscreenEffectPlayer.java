@@ -1,7 +1,5 @@
 package com.banuba.quickstart_c_api;
 
-import java.nio.ByteBuffer;
-
 class OffscreenEffectPlayer {
     private long mOep = 0;
     private DataReadyCallback mDataReadyCallback = null;
@@ -42,7 +40,7 @@ class OffscreenEffectPlayer {
     }
 
     /* image must be NV12 or i420 format */
-    public void processImageAsync(Image image,
+    public void processImageAsync(OffscreenEffectPlayerImage image,
                                   int inputOrientation,
                                   boolean isRequiredMirroring,
                                   int outputOrientation,
@@ -84,14 +82,14 @@ class OffscreenEffectPlayer {
     }
 
     public interface DataReadyCallback {
-        void onDataReady(Image image);
+        void onDataReady(OffscreenEffectPlayerImage image);
     }
 
     public void setDataReadyCallback(DataReadyCallback callback) {
         mDataReadyCallback = callback;
     }
 
-    private void onDataReady(Image image) {
+    private void onDataReady(OffscreenEffectPlayerImage image) {
         if (mDataReadyCallback != null) {
             mDataReadyCallback.onDataReady(image);
         }
@@ -102,7 +100,7 @@ class OffscreenEffectPlayer {
     private static native void externalDeinit();
     private native long externalCreate(int width, int height);
     private native void externalDestroy(long oep);
-    private native void externalProcessImageAsync(long oep, Image image,
+    private native void externalProcessImageAsync(long oep, OffscreenEffectPlayerImage image,
                                                   int inputOrientation,
                                                   boolean isRequiredMirroring,
                                                   int outputOrientation,

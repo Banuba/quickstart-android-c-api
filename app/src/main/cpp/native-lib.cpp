@@ -54,18 +54,18 @@ namespace
         jclass image_class = env->GetObjectClass(jimage);
 
         return {
-                get_byte_buffer_field("mImageZero", env, jimage, image_class),
-                get_byte_buffer_field("mImageFirst", env, jimage, image_class),
-                get_byte_buffer_field("mImageSecond", env, jimage, image_class),
+                get_byte_buffer_field("mPlane0", env, jimage, image_class),
+                get_byte_buffer_field("mPlane1", env, jimage, image_class),
+                get_byte_buffer_field("mPlane2", env, jimage, image_class),
                 get_int_field("mWidth", env, jimage, image_class),
                 get_int_field("mHeight", env, jimage, image_class),
-                get_int_field("rowStrideZero", env, jimage, image_class),
-                get_int_field("rowStrideFirst", env, jimage, image_class),
-                get_int_field("rowStrideSecond", env, jimage, image_class),
-                get_int_field("pixelStrideZero", env, jimage, image_class),
-                get_int_field("pixelStrideFirst", env, jimage, image_class),
-                get_int_field("pixelStrideSecond", env, jimage, image_class),
-                get_int_field("pixelFormat", env, jimage, image_class)
+                get_int_field("mRowStride0", env, jimage, image_class),
+                get_int_field("mRowStride1", env, jimage, image_class),
+                get_int_field("mRowStride2", env, jimage, image_class),
+                get_int_field("mPixelStride0", env, jimage, image_class),
+                get_int_field("mPixelStride1", env, jimage, image_class),
+                get_int_field("mPixelStride2", env, jimage, image_class),
+                get_int_field("mPixelFormat", env, jimage, image_class)
         };
     }
     
@@ -282,7 +282,7 @@ namespace
 
         jclass jcallback_class = env->GetObjectClass(this_ref);
         jmethodID jcallback_method = env->GetMethodID(jcallback_class,
-                                                      "onDataReady", "(Lcom/banuba/quickstart_c_api/Image;)V");
+                                                      "onDataReady", "(Lcom/banuba/quickstart_c_api/OffscreenEffectPlayerImage;)V");
         env->CallVoidMethod(this_ref, jcallback_method, image);
 
         if (env->ExceptionCheck()) {
@@ -352,7 +352,7 @@ extern "C"
         auto image_format = get_image_format(jimage_format);
         auto pb_image = create_pixel_buffer(env, jimage, image_format);
 
-        jclass image_class = env->FindClass("com/banuba/quickstart_c_api/Image");
+        jclass image_class = env->FindClass("com/banuba/quickstart_c_api/OffscreenEffectPlayerImage");
         auto image_class_ref = (jclass) env->NewGlobalRef(image_class);
 
         jobject this_ref = env->NewGlobalRef(thiz);
