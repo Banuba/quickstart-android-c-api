@@ -28,8 +28,6 @@ import com.banuba.sdk.utils.ContextProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static int CAMERA_PERMISSION_REQUEST = 12345;
@@ -40,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
-    private OffscreenEffectPlayerImage mImage = null;
 
     // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
     private ImageFormat mImageFormat = ImageFormat.NV12;
@@ -61,11 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
     void createOEP() {
         oep = new OffscreenEffectPlayer(size.getWidth(), size.getHeight());
-        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>")
+        oep.loadEffect("effects/<!!! PLACE YOUR EFFECT NAME HERE !!!>");
         oep.setDataReadyCallback(
-                (image0,image1, image2, width, height) -> {
-                    List<byte[]> planes = Arrays.asList(image0, image1, image2);
-                    renderer.drawImage(planes, width, height);
+                (offscreenEffectPlayerImage) -> {
+                    renderer.drawImage(offscreenEffectPlayerImage);
                     glView.requestRender();
                 });
     }
@@ -94,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
         /* Create offscreen effect player */
         createOEP();
 
-        mImage = new OffscreenEffectPlayerImage();
         requestCameraPermissionAndStart();
     }
 
@@ -154,8 +149,11 @@ public class MainActivity extends AppCompatActivity {
                 imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
-                            updateImage(proxy);
-                            oep.processImageAsync(mImage);
+                            int rotation = getRotation(MainActivity.this);
+                            int imageFormat = mImageFormat.ordinal();
+                            OffscreenEffectPlayerImage image = new OffscreenEffectPlayerImage(proxy);
+                            oep.processImageAsync(image, getInputOrientation(rotation),
+                                    false, getOutputOrientation(rotation), imageFormat);
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);
@@ -190,34 +188,6 @@ public class MainActivity extends AppCompatActivity {
             return 180;
         }
         return 0;
-    }
-
-    private void updateImage(ImageProxy imageProxy) {
-        int rotation = getRotation(MainActivity.this);
-
-        mImage.mImageInfo.width = imageProxy.getWidth();
-        mImage.mImageInfo.height = imageProxy.getHeight();
-        mImage.mImageInfo.inputOrientation = getInputOrientation(rotation);
-        mImage.mImageInfo.outputOrientation = getOutputOrientation(rotation);
-        mImage.mImageInfo.pixelFormat = imageProxy.getImage().getFormat();
-        mImage.mImageInfo.requireMirroring = false;
-        mImage.mImageInfo.imageFormat = mImageFormat.ordinal();
-
-        mImage.mImageInfo.rowStride0 = imageProxy.getPlanes()[0].getRowStride();
-        mImage.mImageZero = imageProxy.getPlanes()[0].getBuffer();
-        mImage.mImageInfo.pixelStride0 = imageProxy.getPlanes()[0].getPixelStride();
-
-        int planesNumber = imageProxy.getPlanes().length;
-        if (planesNumber > 1) {
-            mImage.mImageInfo.rowStride1 = imageProxy.getPlanes()[1].getRowStride();
-            mImage.mImageFirst = imageProxy.getPlanes()[1].getBuffer();
-            mImage.mImageInfo.pixelStride1 = imageProxy.getPlanes()[1].getPixelStride();
-            if (planesNumber > 2) {
-                mImage.mImageInfo.rowStride2 = imageProxy.getPlanes()[2].getRowStride();
-                mImage.mImageSecond = imageProxy.getPlanes()[2].getBuffer();
-                mImage.mImageInfo.pixelStride2 = imageProxy.getPlanes()[2].getPixelStride();
-            }
-        }
     }
 }
 

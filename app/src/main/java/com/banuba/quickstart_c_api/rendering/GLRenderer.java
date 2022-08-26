@@ -12,6 +12,8 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import com.banuba.quickstart_c_api.OffscreenEffectPlayerImage;
+
 public class GLRenderer implements GLSurfaceView.Renderer {
 
     /* shaders */
@@ -178,10 +180,16 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         mMat4[5] = yScale;
     }
 
-    public void drawImage(List<byte[]> imageDataPlanes, int width, int height) {
-        mImageDataPlanes = imageDataPlanes;
-        mImageWidth = width;
-        mImageHeight = height;
+    public void drawImage(OffscreenEffectPlayerImage image) {
+        mImageDataPlanes.clear();
+        for(int i = 0; i < mTexturesCount; ++i) {
+            ByteBuffer plane = image.getPlane(i);
+            if(plane != null) {
+                mImageDataPlanes.add(plane.array());
+            }
+        }
+        mImageWidth = image.getWidth();
+        mImageHeight = image.getHeight();
     }
 
     /* destructor */

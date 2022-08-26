@@ -1,7 +1,5 @@
 package com.banuba.quickstart_c_api;
 
-import java.nio.ByteBuffer;
-
 class OffscreenEffectPlayer {
     private long mOep = 0;
     private DataReadyCallback mDataReadyCallback = null;
@@ -41,9 +39,14 @@ class OffscreenEffectPlayer {
         }
     }
 
-    /* image must be NV12 format */
-    public void processImageAsync(OffscreenEffectPlayerImage image) {
-        externalProcessImageAsync(mOep, image.mImageZero, image.mImageFirst, image.mImageSecond, image.mImageInfo);
+    /* image must be NV12 or i420 format */
+    public void processImageAsync(OffscreenEffectPlayerImage image,
+                                  int inputOrientation,
+                                  boolean isRequiredMirroring,
+                                  int outputOrientation,
+                                  int imageFormat) {
+        externalProcessImageAsync(mOep, image, inputOrientation, isRequiredMirroring,
+                outputOrientation, imageFormat);
     }
 
     public void surfaceChanged(int width, int height) {
@@ -79,16 +82,16 @@ class OffscreenEffectPlayer {
     }
 
     public interface DataReadyCallback {
-        void onDataReady(byte[] image0, byte[] image1, byte[] image2, int width, int height);
+        void onDataReady(OffscreenEffectPlayerImage image);
     }
 
     public void setDataReadyCallback(DataReadyCallback callback) {
         mDataReadyCallback = callback;
     }
 
-    private void onDataReady(byte[] image0, byte[] image1, byte[] image2, int width, int height) {
+    private void onDataReady(OffscreenEffectPlayerImage image) {
         if (mDataReadyCallback != null) {
-            mDataReadyCallback.onDataReady(image0, image1, image2, width, height);
+            mDataReadyCallback.onDataReady(image);
         }
     }
 
@@ -97,7 +100,11 @@ class OffscreenEffectPlayer {
     private static native void externalDeinit();
     private native long externalCreate(int width, int height);
     private native void externalDestroy(long oep);
-    private native void externalProcessImageAsync(long oep, ByteBuffer imageY, ByteBuffer imageU, ByteBuffer imageV, ImageInfo info);
+    private native void externalProcessImageAsync(long oep, OffscreenEffectPlayerImage image,
+                                                  int inputOrientation,
+                                                  boolean isRequiredMirroring,
+                                                  int outputOrientation,
+                                                  int imageFormat);
     private native void externalSurfaceChanged(long oep, int width, int height);
     private native void externalLoadEffect(long oep, String effectPath);
     private native void externalUnloadEffect(long oep);
@@ -111,3 +118,4 @@ class OffscreenEffectPlayer {
         System.loadLibrary("native-lib");
     }
 }
+
