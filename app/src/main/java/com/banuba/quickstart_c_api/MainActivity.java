@@ -38,10 +38,9 @@ public class MainActivity extends AppCompatActivity {
     private OffscreenEffectPlayer oep = null;
     private GLSurfaceView glView = null;
     private GLRenderer renderer = null;
-    private OffscreenEffectPlayerImage mOffscreenEffectPlayerImage = null;
 
     // Changing mImageOutputFormat will cause the format's changing (input and output image of OEP)
-    private ImageFormat mImageFormat = ImageFormat.i420;
+    private ImageFormat mImageFormat = ImageFormat.NV12;
 
     void createRenderer() {
         switch (mImageFormat) {
@@ -91,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
         /* Create offscreen effect player */
         createOEP();
 
-        mOffscreenEffectPlayerImage = new OffscreenEffectPlayerImage();
         requestCameraPermissionAndStart();
     }
 
@@ -151,14 +149,11 @@ public class MainActivity extends AppCompatActivity {
                 imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(MainActivity.this),
                         proxy -> {
-                            updateImage(proxy);
-
                             int rotation = getRotation(MainActivity.this);
                             int imageFormat = mImageFormat.ordinal();
-
-                            oep.processImageAsync(mOffscreenEffectPlayerImage, getInputOrientation(rotation),
+                            OffscreenEffectPlayerImage image = new OffscreenEffectPlayerImage(proxy);
+                            oep.processImageAsync(image, getInputOrientation(rotation),
                                     false, getOutputOrientation(rotation), imageFormat);
-
                             proxy.close();
                         });
                 cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, imageAnalysis);
@@ -193,29 +188,6 @@ public class MainActivity extends AppCompatActivity {
             return 180;
         }
         return 0;
-    }
-
-    private void updateImagePlane(ImageProxy imageProxy, int planeNumber) {
-        ImageProxy.PlaneProxy planeProxy = imageProxy.getPlanes()[planeNumber];
-        mOffscreenEffectPlayerImage.setPlane(
-                planeNumber,
-                planeProxy.getRowStride(),
-                planeProxy.getBuffer(),
-                planeProxy.getPixelStride());
-    }
-
-    private void updateImage(ImageProxy imageProxy) {
-        mOffscreenEffectPlayerImage.setWidth(imageProxy.getWidth());
-        mOffscreenEffectPlayerImage.setHeight(imageProxy.getHeight());
-        mOffscreenEffectPlayerImage.setPixelFormat(imageProxy.getImage().getFormat());
-        updateImagePlane(imageProxy, 0);
-        int planesNumber = imageProxy.getPlanes().length;
-        if (planesNumber > 1) {
-            updateImagePlane(imageProxy, 1);
-            if (planesNumber > 2) {
-                updateImagePlane(imageProxy, 2);
-            }
-        }
     }
 }
 

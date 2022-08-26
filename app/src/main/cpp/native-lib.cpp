@@ -205,14 +205,19 @@ namespace
     jobject get_image_from_pixel_buffer(pixel_buffer_sptr image,
                                         bnb::oep::interfaces::image_format image_format,
                                         JNIEnv* env, jclass image_class) {
-        jbyteArray byte_array0 = nullptr;
-        jbyteArray byte_array1 = nullptr;
-        jbyteArray byte_array2 = nullptr;
         switch(image_format) {
             case bnb::oep::interfaces::image_format::bpc8_rgba: {
                 auto size = image->get_width() * image->get_height() * image->get_bytes_per_pixel();
-                byte_array0 = env->NewByteArray(size);
+                jbyteArray byte_array0 = env->NewByteArray(size);
                 env->SetByteArrayRegion(byte_array0, 0, size, reinterpret_cast<const jbyte*>((uint8_t*) image->get_base_sptr().get()));
+                if(byte_array0 == nullptr) {
+                    print_message("GetEnv: error in getting data");
+                    return nullptr;
+                }
+                auto image_constructor_id = env->GetMethodID(image_class, "<init>", "([BII)V");
+                return env->NewObject(
+                        image_class, image_constructor_id, byte_array0,
+                        image->get_width(), image->get_height());
                 break;
             }
             case bnb::oep::interfaces::image_format::nv12_bt601_full: {
@@ -221,10 +226,18 @@ namespace
                 void* buf0 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(0).get());
                 void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
 
-                byte_array0 = env->NewByteArray(size0);
-                byte_array1 = env->NewByteArray(size1);
+                jbyteArray byte_array0 = env->NewByteArray(size0);
+                jbyteArray byte_array1 = env->NewByteArray(size1);
                 env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
                 env->SetByteArrayRegion(byte_array1, 0, size1, reinterpret_cast<const jbyte*>(buf1));
+                if(byte_array0 == nullptr || byte_array1 == nullptr) {
+                    print_message("GetEnv: error in getting data");
+                    return nullptr;
+                }
+                auto image_constructor_id = env->GetMethodID(image_class, "<init>", "([B[BII)V");
+                return env->NewObject(
+                        image_class, image_constructor_id, byte_array0, byte_array1,
+                        image->get_width(), image->get_height());
                 break;
             }
             case bnb::oep::interfaces::image_format::i420_bt601_full: {
@@ -235,9 +248,9 @@ namespace
                 void* buf1 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(1).get());
                 void* buf2 = reinterpret_cast<void*>((void*) image->get_base_sptr_of_plane(2).get());
 
-                byte_array0 = env->NewByteArray(size0);
-                byte_array1 = env->NewByteArray(size1);
-                byte_array2 = env->NewByteArray(size2);
+                jbyteArray byte_array0 = env->NewByteArray(size0);
+                jbyteArray byte_array1 = env->NewByteArray(size1);
+                jbyteArray byte_array2 = env->NewByteArray(size2);
                 env->SetByteArrayRegion(byte_array0, 0, size0, reinterpret_cast<const jbyte*>(buf0));
                 int u_width = image->get_width_of_plane(1);
                 int u_stride = image->get_bytes_per_row_of_plane(1);
@@ -252,20 +265,20 @@ namespace
                 for(int i = 0; i < image->get_height_of_plane(2); ++i) {
                     env->SetByteArrayRegion(byte_array2, v_width * i, v_width, reinterpret_cast<const jbyte*>(buf2) + v_stride * i);
                 }
+                if(byte_array0 == nullptr && byte_array1 == nullptr && byte_array2 == nullptr) {
+                    print_message("GetEnv: error in getting data");
+                    return nullptr;
+                }
+                auto image_constructor_id = env->GetMethodID(image_class, "<init>", "([B[B[BII)V");
+                return env->NewObject(
+                        image_class, image_constructor_id, byte_array0, byte_array1, byte_array2,
+                        image->get_width(), image->get_height());
                 break;
             }
             default:
                 break;
         }
-
-        if(byte_array0 == nullptr && byte_array1 == nullptr && byte_array2 == nullptr) {
-            print_message("GetEnv: unsupported output image format");
-            return nullptr;
-        }
-        auto image_constructor_id = env->GetMethodID(image_class, "<init>", "([B[B[BII)V");
-        return env->NewObject(
-                image_class, image_constructor_id, byte_array0, byte_array1, byte_array2,
-                image->get_width(), image->get_height());
+        return nullptr;
     }
 
     void draw_image_from_pixel_buffer(pixel_buffer_sptr pixel_buffer,
