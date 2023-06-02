@@ -13,6 +13,7 @@
 #include <android/log.h>
 #include <jni.h>
 
+#include <cassert>
 #include <string>
 #include <vector>
 

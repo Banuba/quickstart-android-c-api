@@ -79,9 +79,6 @@ public class MainActivity extends AppCompatActivity {
 
         updateSize();
 
-        String pathToResources = new File(getFilesDir().getAbsoluteFile(), "bnb-resources").getAbsolutePath();
-        ResourcesExtractor.Companion.prepare(getAssets(), pathToResources);
-
         /* initialize OpenGL renderer */
         createRenderer();
         glView = findViewById(R.id.glSurfaceView);
@@ -90,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         glView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         /* initialize Banuba SDK */
-        OffscreenEffectPlayer.init(pathToResources, BanubaClientToken.KEY);
+        OffscreenEffectPlayer.init("", BanubaClientToken.KEY);
         /* Create offscreen effect player */
         createOEP();
 
