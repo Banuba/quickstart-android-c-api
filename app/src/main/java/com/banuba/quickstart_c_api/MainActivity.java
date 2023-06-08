@@ -197,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
         mImage.mImageInfo.inputOrientation = getInputOrientation(rotation);
         mImage.mImageInfo.outputOrientation = getOutputOrientation(rotation);
         mImage.mImageInfo.pixelFormat = imageProxy.getImage().getFormat();
-        mImage.mImageInfo.requireMirroring = false;
+        mImage.mImageInfo.requireMirroring = true;
         mImage.mImageInfo.imageFormat = mImageFormat.ordinal();
 
         mImage.mImageInfo.rowStride0 = imageProxy.getPlanes()[0].getRowStride();

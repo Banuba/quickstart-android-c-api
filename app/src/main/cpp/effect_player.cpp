@@ -6,6 +6,7 @@
 #include <optional>
 #include <iostream>
 #include <algorithm>
+#include <array>
 
 namespace
 {
@@ -21,6 +22,19 @@ namespace
             bnb_error_destroy(e);
             throw std::runtime_error(msg);
         }
+    }
+
+    using planes_holder_t = std::array<bnb::oep::interfaces::pixel_buffer::plane_sptr, 3>;
+
+    auto planes_holder(pixel_buffer_sptr image) {
+        auto holder = new planes_holder_t;
+        for (int i = 0; i < image->get_plane_count(); ++i) {
+            holder->at(i) = image->get_base_sptr_of_plane(i);
+        }
+        return holder;
+    }
+    void planes_holder_release(void* holder) {
+        delete reinterpret_cast<planes_holder_t*>(holder);
     }
 }
 
@@ -144,6 +158,9 @@ namespace bnb::oep
     void effect_player::push_frame(pixel_buffer_sptr image, bnb::oep::interfaces::rotation image_orientation, bool require_mirroring)
     {
         full_image_holder_t* bnb_image{nullptr};
+        bnb_error* error{nullptr};
+        bnb_yuv_color_range_t range;
+        bnb_yuv_color_space_t space;
 
         using ns = bnb::oep::interfaces::image_format;
         auto bnb_image_format = make_bnb_image_format(image, image_orientation, require_mirroring);
@@ -153,31 +170,61 @@ namespace bnb::oep
             case ns::bpc8_rgba:
             case ns::bpc8_bgra:
             case ns::bpc8_argb:
-                bnb_image = bnb_full_image_from_bpc8_img(
+                bnb_image = bnb_full_image_from_bpc8_img_no_copy(
                     bnb_image_format,
                     make_bnb_pixel_format(image),
                     image->get_base_sptr().get(),
                     image->get_bytes_per_row(),
-                    nullptr);
+                    &planes_holder_release,
+                    planes_holder(image),
+                    &error);
                 break;
+
+
             case ns::nv12_bt601_full:
+                range = bnb_yuv_full_range;
+                space = bnb_bt601;
             case ns::nv12_bt601_video:
+                range = bnb_yuv_video_range;
+                space = bnb_bt601;
             case ns::nv12_bt709_full:
+                range = bnb_yuv_full_range;
+                space = bnb_bt709;
             case ns::nv12_bt709_video:
-                bnb_image = bnb_full_image_from_yuv_nv12_img(
-                    bnb_image_format,
+                range = bnb_yuv_video_range;
+                space = bnb_bt709;
+
+                bnb_image = bnb_full_image_from_yuv_nv12_img_no_copy_ex(
+                    &bnb_image_format,
+                    range,
+                    space,
                     image->get_base_sptr_of_plane(0).get(),
                     image->get_bytes_per_row_of_plane(0),
                     image->get_base_sptr_of_plane(1).get(),
                     image->get_bytes_per_row_of_plane(1),
-                    nullptr);
+                    &planes_holder_release,
+                    planes_holder(image),
+                    &error);
                 break;
+
+
             case ns::i420_bt601_full:
+                range = bnb_yuv_full_range;
+                space = bnb_bt601;
             case ns::i420_bt601_video:
+                range = bnb_yuv_video_range;
+                space = bnb_bt601;
             case ns::i420_bt709_full:
+                range = bnb_yuv_full_range;
+                space = bnb_bt709;
             case ns::i420_bt709_video:
-                bnb_image = bnb_full_image_from_yuv_i420_img(
-                    bnb_image_format,
+                range = bnb_yuv_video_range;
+                space = bnb_bt709;
+
+                bnb_image = bnb_full_image_from_yuv_i420_img_no_copy_ex(
+                    &bnb_image_format,
+                    range,
+                    space,
                     image->get_base_sptr_of_plane(0).get(),
                     image->get_bytes_per_row_of_plane(0),
                     1,
@@ -187,18 +234,20 @@ namespace bnb::oep
                     image->get_base_sptr_of_plane(2).get(),
                     image->get_bytes_per_row_of_plane(2),
                     1,
-                    nullptr);
+                    &planes_holder_release,
+                    planes_holder(image),
+                    &error);
                 break;
             default:
                 break;
         }
+
 
         if (!bnb_image) {
             print_message("no image was created");
             return;
         }
 
-        bnb_error* error{nullptr};
         auto fd = bnb_frame_data_init(&error);
         check_error(error);
 
