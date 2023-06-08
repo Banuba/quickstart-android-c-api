@@ -22,6 +22,11 @@
 
 namespace
 {
+    void print_message(const char* message)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "OEP_ERROR ", "%s\n", message);
+    }
+
     struct image_info {
         int width;
         int height;

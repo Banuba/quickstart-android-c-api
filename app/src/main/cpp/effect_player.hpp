@@ -5,10 +5,6 @@
 #include <bnb/effect_player.h>
 #include <bnb/utility_manager.h>
 
-// Temporary solution. Normal logging will be added in the future
-// TODO: add logging
-void print_message(const char* message);
-
 namespace bnb::oep
 {
 
@@ -37,17 +33,17 @@ namespace bnb::oep
 
         void push_frame(pixel_buffer_sptr image, bnb::oep::interfaces::rotation image_orientation, bool require_mirroring) override;
 
-        void draw() override;
+        int64_t draw() override;
 
         void stop() override;
 
     private:
         bnb_image_format_t make_bnb_image_format(pixel_buffer_sptr image, interfaces::rotation orientation, bool require_mirroring);
         bnb_pixel_format_t make_bnb_pixel_format(pixel_buffer_sptr image);
-        void handle_bnb_error(bnb_error** error);
 
     private:
-        effect_player_holder_t* m_ep{nullptr};
+        effect_player_holder_t* m_ep {nullptr};
+        frame_processor_t* m_fp {nullptr};
     }; /* class effect_player */
 
 } /* namespace bnb::oep */

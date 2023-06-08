@@ -184,9 +184,9 @@ public class MainActivity extends AppCompatActivity {
 
     private int getOutputOrientation(int rotation) {
         if(rotation == Surface.ROTATION_0 || rotation ==  Surface.ROTATION_180) {
-            return 180;
+            return 0;
         }
-        return 0;
+        return 180;
     }
 
     private void updateImage(ImageProxy imageProxy) {
